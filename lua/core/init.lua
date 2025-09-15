@@ -1,6 +1,3 @@
-    
-    print("[BreathingSystem] All modules loaded successfully!")
-end
 --[[
     BreathingSystem Core - Main Entry Point
 ]]
@@ -21,6 +18,7 @@ if SERVER then
     include("core/breathing_types_manager.lua")
     include("core/player_registry.lua")
     include("core/forms.lua")
+    include("core/network_sync.lua")  -- Network syncing
     
     -- Load breathing types (they will self-register)
     include("breathing_types/water.lua")
@@ -348,3 +346,39 @@ if SERVER then
         local effectType = args[1]
         local formID = args[2]
         
+        if effectType == "particles" then
+            if BreathingSystem.Particles then
+                if formID then
+                    BreathingSystem.Particles.CreateFormEffect(ply, formID)
+                else
+                    BreathingSystem.Particles.CreateBreathingTypeEffect(ply, "water")
+                end
+                ply:ChatPrint("[BreathingSystem] Particle effect test started!")
+            else
+                ply:ChatPrint("[BreathingSystem] Particle system not available!")
+            end
+        elseif effectType == "sounds" then
+            if BreathingSystem.Sounds then
+                BreathingSystem.Sounds.PlaySound(ply, "breathing_type", "water")
+                ply:ChatPrint("[BreathingSystem] Sound effect test started!")
+            else
+                ply:ChatPrint("[BreathingSystem] Sound system not available!")
+            end
+        elseif effectType == "animations" then
+            if BreathingSystem.Animations then
+                BreathingSystem.Animations.PlayAnimation(ply, "breathing_type", "water")
+                ply:ChatPrint("[BreathingSystem] Animation test started!")
+            else
+                ply:ChatPrint("[BreathingSystem] Animation system not available!")
+            end
+        else
+            ply:ChatPrint("Unknown effect type: " .. effectType)
+            ply:ChatPrint("Valid types: particles, sounds, animations")
+        end
+    end)
+    
+    print("[BreathingSystem] Test commands registered!")
+end
+
+print("[BreathingSystem] Core system initialized!")
+
