@@ -47,10 +47,15 @@ if SERVER then
     include("breathingsystem/mechanics/prerequisites.lua")
     include("breathingsystem/mechanics/damage.lua")
     
+    -- Load progression modules
+    include("breathingsystem/progression/unlocks.lua")
+    include("breathingsystem/progression/training.lua")
+    include("breathingsystem/progression/concentration.lua")
+    
     -- AddCSLuaFile for client modules (when we add them in future phases)
     -- AddCSLuaFile("breathingsystem/client/...")
     
-    print("[BreathingSystem] Core modules, breathing types, and mechanics loaded successfully")
+    print("[BreathingSystem] Core modules, breathing types, mechanics, and progression loaded successfully")
 end
 
 -- Basic permissions system
@@ -102,7 +107,14 @@ if SERVER then
         print("[BreathingSystem] Mechanics status:")
         print("  - Stamina: " .. BreathingSystem.Stamina.GetStamina(ply) .. "/" .. BreathingSystem.Stamina.GetMaxStamina(ply))
         print("  - Concentration: " .. BreathingSystem.Stamina.GetConcentration(ply) .. "/" .. BreathingSystem.Stamina.GetMaxConcentration(ply))
-        print("  - Level: " .. BreathingSystem.Prerequisites.GetLevel(ply))
+        print("  - Level: " .. BreathingSystem.Training.GetLevel(ply))
+        print("  - XP: " .. BreathingSystem.Training.GetXP(ply))
+        
+        -- Test progression
+        print("[BreathingSystem] Progression status:")
+        print("  - Unlocked forms: " .. table.Count(BreathingSystem.Unlocks.GetUnlockedForms(ply)))
+        print("  - Training status: " .. (BreathingSystem.Training.GetTrainingStatus(ply).isTraining and "Training" or "Not training"))
+        print("  - Total concentration: " .. (BreathingSystem.Concentration.IsInTotalConcentration(ply) and "Active" or "Inactive"))
         
         ply:ChatPrint("[BreathingSystem] Test completed! Check console for details.")
     end)
@@ -199,7 +211,43 @@ if SERVER then
         end
     end)
     
-    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage")
+    -- Command to start training
+    concommand.Add("breathingsystem_train", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if #args < 2 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_train <student_name> <form_id>")
+            return
+        end
+        
+        local studentName = args[1]
+        local formID = args[2]
+        
+        local student = player.GetByName(studentName)
+        if not IsValid(student) then
+            ply:ChatPrint("[BreathingSystem] Player '" .. studentName .. "' not found!")
+            return
+        end
+        
+        if BreathingSystem.Training.StartTraining(ply, student, formID) then
+            ply:ChatPrint("[BreathingSystem] Training session started with " .. student:Name())
+        else
+            ply:ChatPrint("[BreathingSystem] Failed to start training session!")
+        end
+    end)
+    
+    -- Command to enter total concentration
+    concommand.Add("breathingsystem_total_concentration", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if BreathingSystem.Concentration.EnterTotalConcentration(ply) then
+            ply:ChatPrint("[BreathingSystem] Entered total concentration!")
+        else
+            ply:ChatPrint("[BreathingSystem] Cannot enter total concentration right now!")
+        end
+    end)
+    
+    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration")
 end
 
 -- Initialize default breathing types
