@@ -22,6 +22,10 @@ if SERVER then
     
     -- Load breathing types (they will self-register)
     include("breathing_types/water.lua")
+    include("breathing_types/fire.lua")
+    include("breathing_types/thunder.lua")
+    include("breathing_types/stone.lua")
+    include("breathing_types/wind.lua")
     
     -- Load mechanics modules
     include("mechanics/stamina.lua")
@@ -381,4 +385,5 @@ if SERVER then
 end
 
 print("[BreathingSystem] Core system initialized!")
+
 
