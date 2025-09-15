@@ -52,10 +52,15 @@ if SERVER then
     include("breathingsystem/progression/training.lua")
     include("breathingsystem/progression/concentration.lua")
     
+    -- Load effects modules
+    include("breathingsystem/effects/particles.lua")
+    include("breathingsystem/effects/animations.lua")
+    include("breathingsystem/effects/sounds.lua")
+    
     -- AddCSLuaFile for client modules (when we add them in future phases)
     -- AddCSLuaFile("breathingsystem/client/...")
     
-    print("[BreathingSystem] Core modules, breathing types, mechanics, and progression loaded successfully")
+    print("[BreathingSystem] Core modules, breathing types, mechanics, progression, and effects loaded successfully")
 end
 
 -- Basic permissions system
@@ -115,6 +120,12 @@ if SERVER then
         print("  - Unlocked forms: " .. table.Count(BreathingSystem.Unlocks.GetUnlockedForms(ply)))
         print("  - Training status: " .. (BreathingSystem.Training.GetTrainingStatus(ply).isTraining and "Training" or "Not training"))
         print("  - Total concentration: " .. (BreathingSystem.Concentration.IsInTotalConcentration(ply) and "Active" or "Inactive"))
+        
+        -- Test effects
+        print("[BreathingSystem] Effects status:")
+        print("  - Active particles: " .. table.Count(BreathingSystem.Particles.GetActiveEffects(ply)))
+        print("  - Active animations: " .. table.Count(BreathingSystem.Animations.GetActiveAnimations(ply)))
+        print("  - Active sounds: " .. table.Count(BreathingSystem.Sounds.GetActiveSounds(ply)))
         
         ply:ChatPrint("[BreathingSystem] Test completed! Check console for details.")
     end)
@@ -247,7 +258,50 @@ if SERVER then
         end
     end)
     
-    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration")
+    -- Command to test effects
+    concommand.Add("breathingsystem_test_effects", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if #args < 1 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_test_effects <effect_type> [form_id]")
+            return
+        end
+        
+        local effectType = args[1]
+        local formID = args[2]
+        
+        -- Test particle effects
+        if effectType == "particles" then
+            if formID then
+                BreathingSystem.Particles.CreateFormEffect(ply, formID)
+            else
+                BreathingSystem.Particles.CreateBreathingTypeEffect(ply, "water")
+            end
+            ply:ChatPrint("[BreathingSystem] Particle effect test started!")
+        end
+        
+        -- Test animations
+        if effectType == "animations" then
+            if formID then
+                BreathingSystem.Animations.PlayFormAnimation(ply, formID)
+            else
+                BreathingSystem.Animations.PlayBreathingTypeAnimation(ply, "water")
+            end
+            ply:ChatPrint("[BreathingSystem] Animation test started!")
+        end
+        
+        -- Test sounds
+        if effectType == "sounds" then
+            if formID then
+                BreathingSystem.Sounds.PlayFormSound(ply, formID)
+            else
+                BreathingSystem.Sounds.PlayBreathingTypeSound(ply, "water")
+            end
+            ply:ChatPrint("[BreathingSystem] Sound test started!")
+        end
+    end)
+    
+    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration, breathingsystem_test_effects")
 end
 
 -- Initialize default breathing types
