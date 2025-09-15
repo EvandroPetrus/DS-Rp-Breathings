@@ -89,6 +89,60 @@ if SERVER then
         ply:SetNWInt("BreathingExpNext", requiredExp)
     end
     
+    -- Apply form-specific effects
+    local function ApplyFormEffects(ply, breathingType, formNum)
+        local data = GetTrainingData(ply)
+        local power = 1 + (data.level * 0.1) -- Power scales with level
+        
+        if breathingType == "water" then
+            if formNum == 1 then
+                -- Form 1: Basic water slash
+                ply:SetHealth(math.min(ply:GetMaxHealth(), ply:Health() + 5))
+            elseif formNum == 2 then
+                -- Form 2: Water wheel - area healing
+                for _, target in ipairs(ents.FindInSphere(ply:GetPos(), 200)) do
+                    if target:IsPlayer() and target:Team() == ply:Team() then
+                        target:SetHealth(math.min(target:GetMaxHealth(), target:Health() + 10))
+                    end
+                end
+            elseif formNum == 3 then
+                -- Form 3: Flowing dance - speed boost
+                ply:SetWalkSpeed(300 * power)
+                ply:SetRunSpeed(500 * power)
+                timer.Simple(5, function()
+                    if IsValid(ply) then
+                        ply:SetWalkSpeed(200)
+                        ply:SetRunSpeed(400)
+                    end
+                end)
+            elseif formNum == 4 then
+                -- Form 4: Waterfall basin - team heal
+                for _, target in ipairs(ents.FindInSphere(ply:GetPos(), 300)) do
+                    if target:IsPlayer() and target:Team() == ply:Team() then
+                        target:SetHealth(math.min(target:GetMaxHealth(), target:Health() + 30))
+                        target:SetArmor(math.min(100, target:Armor() + 20))
+                    end
+                end
+            elseif formNum == 5 then
+                -- Form 5: Constant flux - ultimate
+                ply:SetHealth(ply:GetMaxHealth())
+                ply:SetArmor(100)
+                ply:SetWalkSpeed(400 * power)
+                ply:SetRunSpeed(700 * power)
+                ply:GodEnable()
+                timer.Simple(3, function()
+                    if IsValid(ply) then
+                        ply:GodDisable()
+                        ply:SetWalkSpeed(200)
+                        ply:SetRunSpeed(400)
+                    end
+                end)
+            end
+        end
+        
+        -- Add similar effects for other breathing types...
+    end
+    
     -- Enhanced form usage with training system
     concommand.Add("bs_use_form", function(ply, cmd, args)
         if not IsValid(ply) then return end
@@ -163,60 +217,6 @@ if SERVER then
         -- Apply form-specific effects based on level
         ApplyFormEffects(ply, breathingType, formNum)
     end)
-    
-    -- Apply form-specific effects
-    local function ApplyFormEffects(ply, breathingType, formNum)
-        local data = GetTrainingData(ply)
-        local power = 1 + (data.level * 0.1) -- Power scales with level
-        
-        if breathingType == "water" then
-            if formNum == 1 then
-                -- Form 1: Basic water slash
-                ply:SetHealth(math.min(ply:GetMaxHealth(), ply:Health() + 5))
-            elseif formNum == 2 then
-                -- Form 2: Water wheel - area healing
-                for _, target in ipairs(ents.FindInSphere(ply:GetPos(), 200)) do
-                    if target:IsPlayer() and target:Team() == ply:Team() then
-                        target:SetHealth(math.min(target:GetMaxHealth(), target:Health() + 10))
-                    end
-                end
-            elseif formNum == 3 then
-                -- Form 3: Flowing dance - speed boost
-                ply:SetWalkSpeed(300 * power)
-                ply:SetRunSpeed(500 * power)
-                timer.Simple(5, function()
-                    if IsValid(ply) then
-                        ply:SetWalkSpeed(200)
-                        ply:SetRunSpeed(400)
-                    end
-                end)
-            elseif formNum == 4 then
-                -- Form 4: Waterfall basin - team heal
-                for _, target in ipairs(ents.FindInSphere(ply:GetPos(), 300)) do
-                    if target:IsPlayer() and target:Team() == ply:Team() then
-                        target:SetHealth(math.min(target:GetMaxHealth(), target:Health() + 30))
-                        target:SetArmor(math.min(100, target:Armor() + 20))
-                    end
-                end
-            elseif formNum == 5 then
-                -- Form 5: Constant flux - ultimate
-                ply:SetHealth(ply:GetMaxHealth())
-                ply:SetArmor(100)
-                ply:SetWalkSpeed(400 * power)
-                ply:SetRunSpeed(700 * power)
-                ply:GodEnable()
-                timer.Simple(3, function()
-                    if IsValid(ply) then
-                        ply:GodDisable()
-                        ply:SetWalkSpeed(200)
-                        ply:SetRunSpeed(400)
-                    end
-                end)
-            end
-        end
-        
-        -- Add similar effects for other breathing types...
-    end
     
     -- Command to unlock forms with training points
     concommand.Add("bs_unlock_form", function(ply, cmd, args)
