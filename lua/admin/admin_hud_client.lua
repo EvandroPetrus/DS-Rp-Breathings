@@ -170,12 +170,12 @@ local function CreateAdminHUD()
     
     -- Tab buttons
     local tabs = {
-        {name = "Players", icon = "👥"},
-        {name = "Balance", icon = "⚖️"},
-        {name = "Breathing Types", icon = "🌊"},
-        {name = "Forms", icon = "⚔️"},
-        {name = "Logs", icon = "📋"},
-        {name = "Settings", icon = "⚙️"}
+        {name = "Players", icon = "P"},
+        {name = "Balance", icon = "B"},
+        {name = "Breathing Types", icon = "T"},
+        {name = "Forms", icon = "F"},
+        {name = "Logs", icon = "L"},
+        {name = "Settings", icon = "S"}
     }
     
     local tabContainer = vgui.Create("DPanel", frame)
@@ -204,8 +204,8 @@ local function CreateAdminHUD()
             end
             
             -- Icon and text
-            draw.SimpleText(tab.icon, "BreathingAdmin_Header", 20, h/2 - 8, isSelected and Colors.accent or Colors.textDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText(tab.name, "BreathingAdmin_Text", 45, h/2 + 8, isSelected and Colors.text or Colors.textDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(tab.icon, "BreathingAdmin_Header", 15, h/2, isSelected and Colors.accent or Colors.textDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(tab.name, "BreathingAdmin_Text", 35, h/2, isSelected and Colors.text or Colors.textDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         end
         
         tabBtn.DoClick = function()
@@ -334,102 +334,282 @@ function CreatePlayersTab()
     
     -- Action buttons for selected player
     if AdminHUD.selectedPlayer then
-        local y = 300
-        
-        -- Breathing type dropdown
-        local breathingLabel = vgui.Create("DLabel", detailsPanel)
-        breathingLabel:SetPos(20, y)
-        breathingLabel:SetSize(100, 20)
-        breathingLabel:SetText("Breathing Type:")
-        breathingLabel:SetFont("BreathingAdmin_Text")
-        breathingLabel:SetTextColor(Colors.text)
-        
-        local breathingDropdown = vgui.Create("DComboBox", detailsPanel)
-        breathingDropdown:SetPos(130, y)
-        breathingDropdown:SetSize(150, 25)
-        breathingDropdown:SetValue("Select Type")
-        
-        breathingDropdown:AddChoice("none")
-        for id, typeData in pairs(AdminHUD.data.breathingTypes or {}) do
-            breathingDropdown:AddChoice(id)
-        end
-        
-        breathingDropdown.OnSelect = function(self, index, value)
-            SendAdminCommand("set_player_breathing", {
-                player_index = AdminHUD.selectedPlayer,
-                breathing_type = value
-            })
-        end
-        
-        y = y + 35
-        
-        -- Level input
-        local levelLabel = vgui.Create("DLabel", detailsPanel)
-        levelLabel:SetPos(20, y)
-        levelLabel:SetSize(100, 20)
-        levelLabel:SetText("Level:")
-        levelLabel:SetFont("BreathingAdmin_Text")
-        levelLabel:SetTextColor(Colors.text)
-        
-        local levelInput = vgui.Create("DTextEntry", detailsPanel)
-        levelInput:SetPos(130, y)
-        levelInput:SetSize(60, 25)
-        levelInput:SetNumeric(true)
-        
-        local levelBtn = CreateStyledButton(detailsPanel, "Set", 200, y, 40, 25, function()
-            local level = tonumber(levelInput:GetValue())
-            if level then
-                SendAdminCommand("set_player_level", {
-                    player_index = AdminHUD.selectedPlayer,
-                    level = level
-                })
+        local playerData = AdminHUD.data.players[AdminHUD.selectedPlayer]
+        if playerData then
+            local y = 280
+            
+            -- Edit Controls Panel
+            local editPanel = vgui.Create("DPanel", detailsPanel)
+            editPanel:SetPos(20, y)
+            editPanel:SetSize(detailsPanel:GetWide() - 40, 280)
+            editPanel.Paint = function(self, w, h)
+                draw.RoundedBox(6, 0, 0, w, h, Color(30, 30, 35, 200))
+                draw.SimpleText("Edit Player: " .. playerData.name, "BreathingAdmin_SubHeader", 10, 5, Colors.accent)
             end
-        end)
-        
-        y = y + 35
-        
-        -- XP input
-        local xpLabel = vgui.Create("DLabel", detailsPanel)
-        xpLabel:SetPos(20, y)
-        xpLabel:SetSize(100, 20)
-        xpLabel:SetText("XP:")
-        xpLabel:SetFont("BreathingAdmin_Text")
-        xpLabel:SetTextColor(Colors.text)
-        
-        local xpInput = vgui.Create("DTextEntry", detailsPanel)
-        xpInput:SetPos(130, y)
-        xpInput:SetSize(60, 25)
-        xpInput:SetNumeric(true)
-        
-        local xpBtn = CreateStyledButton(detailsPanel, "Set", 200, y, 40, 25, function()
-            local xp = tonumber(xpInput:GetValue())
-            if xp then
-                SendAdminCommand("set_player_xp", {
-                    player_index = AdminHUD.selectedPlayer,
-                    xp = xp
-                })
-            end
-        end)
-        
-        y = y + 45
-        
-        -- Action buttons
-        CreateStyledButton(detailsPanel, "Reset Player", 20, y, 120, 30, function()
-            SendAdminCommand("reset_player", {
-                player_index = AdminHUD.selectedPlayer
-            })
-        end)
-        
-        CreateStyledButton(detailsPanel, "Heal Full", 150, y, 100, 30, function()
-            local playerData = AdminHUD.data.players[AdminHUD.selectedPlayer]
-            if playerData then
+            
+            local innerY = 35
+            
+            -- Breathing type dropdown with Apply button
+            local breathingLabel = vgui.Create("DLabel", editPanel)
+            breathingLabel:SetPos(10, innerY)
+            breathingLabel:SetSize(100, 20)
+            breathingLabel:SetText("Breathing Type:")
+            breathingLabel:SetFont("BreathingAdmin_Text")
+            breathingLabel:SetTextColor(Colors.text)
+            
+            local breathingDropdown = vgui.Create("DComboBox", editPanel)
+            breathingDropdown:SetPos(120, innerY)
+            breathingDropdown:SetSize(130, 25)
+            
+            -- Set current value
+            local currentBreathing = playerData.breathing_type or "none"
+            breathingDropdown:SetValue(currentBreathing)
+            
+            -- Add all breathing type choices
+            breathingDropdown:AddChoice("none", "none")
+            breathingDropdown:AddChoice("Water", "water")
+            breathingDropdown:AddChoice("Fire", "fire") 
+            breathingDropdown:AddChoice("Thunder", "thunder")
+            breathingDropdown:AddChoice("Stone", "stone")
+            breathingDropdown:AddChoice("Wind", "wind")
+            
+            -- Apply button for breathing type
+            CreateStyledButton(editPanel, "Apply", 255, innerY, 50, 25, function()
+                local _, value = breathingDropdown:GetSelected()
+                if value then
+                    SendAdminCommand("set_player_breathing", {
+                        player_index = AdminHUD.selectedPlayer,
+                        breathing_type = value
+                    })
+                    chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Set breathing type to: " .. value)
+                end
+            end)
+            
+            innerY = innerY + 30
+            
+            -- Level input
+            local levelLabel = vgui.Create("DLabel", editPanel)
+            levelLabel:SetPos(10, innerY)
+            levelLabel:SetSize(100, 20)
+            levelLabel:SetText("Level:")
+            levelLabel:SetFont("BreathingAdmin_Text")
+            levelLabel:SetTextColor(Colors.text)
+            
+            local levelInput = vgui.Create("DTextEntry", editPanel)
+            levelInput:SetPos(120, innerY)
+            levelInput:SetSize(60, 25)
+            levelInput:SetNumeric(true)
+            levelInput:SetValue(tostring(playerData.level or 1))
+            levelInput:SetFont("BreathingAdmin_Text")
+            
+            -- Level quick buttons
+            CreateStyledButton(editPanel, "+10", 185, innerY, 30, 25, function()
+                local current = tonumber(levelInput:GetValue()) or 1
+                levelInput:SetValue(tostring(math.min(100, current + 10)))
+            end)
+            
+            CreateStyledButton(editPanel, "Max", 220, innerY, 30, 25, function()
+                levelInput:SetValue("100")
+            end)
+            
+            CreateStyledButton(editPanel, "Apply", 255, innerY, 50, 25, function()
+                local level = tonumber(levelInput:GetValue())
+                if level then
+                    SendAdminCommand("set_player_level", {
+                        player_index = AdminHUD.selectedPlayer,
+                        level = math.Clamp(level, 1, 100)
+                    })
+                    chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Set level to: " .. level)
+                end
+            end)
+            
+            innerY = innerY + 30
+            
+            -- XP input
+            local xpLabel = vgui.Create("DLabel", editPanel)
+            xpLabel:SetPos(10, innerY)
+            xpLabel:SetSize(100, 20)
+            xpLabel:SetText("XP:")
+            xpLabel:SetFont("BreathingAdmin_Text")
+            xpLabel:SetTextColor(Colors.text)
+            
+            local xpInput = vgui.Create("DTextEntry", editPanel)
+            xpInput:SetPos(120, innerY)
+            xpInput:SetSize(60, 25)
+            xpInput:SetNumeric(true)
+            xpInput:SetValue(tostring(playerData.xp or 0))
+            xpInput:SetFont("BreathingAdmin_Text")
+            
+            -- XP quick buttons
+            CreateStyledButton(editPanel, "+100", 185, innerY, 35, 25, function()
+                local current = tonumber(xpInput:GetValue()) or 0
+                xpInput:SetValue(tostring(current + 100))
+            end)
+            
+            CreateStyledButton(editPanel, "+1K", 223, innerY, 30, 25, function()
+                local current = tonumber(xpInput:GetValue()) or 0
+                xpInput:SetValue(tostring(current + 1000))
+            end)
+            
+            CreateStyledButton(editPanel, "Apply", 255, innerY, 50, 25, function()
+                local xp = tonumber(xpInput:GetValue())
+                if xp then
+                    SendAdminCommand("set_player_xp", {
+                        player_index = AdminHUD.selectedPlayer,
+                        xp = math.max(0, xp)
+                    })
+                    chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Set XP to: " .. xp)
+                end
+            end)
+            
+            innerY = innerY + 30
+            
+            -- Stamina controls
+            local staminaLabel = vgui.Create("DLabel", editPanel)
+            staminaLabel:SetPos(10, innerY)
+            staminaLabel:SetSize(100, 20)
+            staminaLabel:SetText("Stamina:")
+            staminaLabel:SetFont("BreathingAdmin_Text")
+            staminaLabel:SetTextColor(Colors.text)
+            
+            local staminaInput = vgui.Create("DTextEntry", editPanel)
+            staminaInput:SetPos(120, innerY)
+            staminaInput:SetSize(40, 25)
+            staminaInput:SetNumeric(true)
+            staminaInput:SetValue(tostring(playerData.stamina or 100))
+            staminaInput:SetFont("BreathingAdmin_Small")
+            
+            local slashLabel = vgui.Create("DLabel", editPanel)
+            slashLabel:SetPos(162, innerY)
+            slashLabel:SetSize(10, 25)
+            slashLabel:SetText("/")
+            slashLabel:SetFont("BreathingAdmin_Text")
+            slashLabel:SetTextColor(Colors.textDim)
+            
+            local maxStaminaInput = vgui.Create("DTextEntry", editPanel)
+            maxStaminaInput:SetPos(175, innerY)
+            maxStaminaInput:SetSize(40, 25)
+            maxStaminaInput:SetNumeric(true)
+            maxStaminaInput:SetValue(tostring(playerData.max_stamina or 100))
+            maxStaminaInput:SetFont("BreathingAdmin_Small")
+            
+            CreateStyledButton(editPanel, "Full", 220, innerY, 33, 25, function()
+                local max = tonumber(maxStaminaInput:GetValue()) or 100
+                staminaInput:SetValue(tostring(max))
+            end)
+            
+            CreateStyledButton(editPanel, "Apply", 255, innerY, 50, 25, function()
+                local stamina = tonumber(staminaInput:GetValue())
+                local maxStamina = tonumber(maxStaminaInput:GetValue())
+                if stamina and maxStamina then
+                    SendAdminCommand("set_player_stamina", {
+                        player_index = AdminHUD.selectedPlayer,
+                        stamina = math.Clamp(stamina, 0, maxStamina),
+                        max_stamina = math.max(1, maxStamina)
+                    })
+                    chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Set stamina to: " .. stamina .. "/" .. maxStamina)
+                end
+            end)
+            
+            innerY = innerY + 30
+            
+            -- Concentration controls
+            local concLabel = vgui.Create("DLabel", editPanel)
+            concLabel:SetPos(10, innerY)
+            concLabel:SetSize(100, 20)
+            concLabel:SetText("Concentration:")
+            concLabel:SetFont("BreathingAdmin_Text")
+            concLabel:SetTextColor(Colors.text)
+            
+            local concInput = vgui.Create("DTextEntry", editPanel)
+            concInput:SetPos(120, innerY)
+            concInput:SetSize(40, 25)
+            concInput:SetNumeric(true)
+            concInput:SetValue(tostring(playerData.concentration or 0))
+            concInput:SetFont("BreathingAdmin_Small")
+            
+            local slashLabel2 = vgui.Create("DLabel", editPanel)
+            slashLabel2:SetPos(162, innerY)
+            slashLabel2:SetSize(10, 25)
+            slashLabel2:SetText("/")
+            slashLabel2:SetFont("BreathingAdmin_Text")
+            slashLabel2:SetTextColor(Colors.textDim)
+            
+            local maxConcInput = vgui.Create("DTextEntry", editPanel)
+            maxConcInput:SetPos(175, innerY)
+            maxConcInput:SetSize(40, 25)
+            maxConcInput:SetNumeric(true)
+            maxConcInput:SetValue(tostring(playerData.max_concentration or 100))
+            maxConcInput:SetFont("BreathingAdmin_Small")
+            
+            CreateStyledButton(editPanel, "Full", 220, innerY, 33, 25, function()
+                local max = tonumber(maxConcInput:GetValue()) or 100
+                concInput:SetValue(tostring(max))
+            end)
+            
+            CreateStyledButton(editPanel, "Apply", 255, innerY, 50, 25, function()
+                local conc = tonumber(concInput:GetValue())
+                local maxConc = tonumber(maxConcInput:GetValue())
+                if conc and maxConc then
+                    SendAdminCommand("set_player_concentration", {
+                        player_index = AdminHUD.selectedPlayer,
+                        concentration = math.Clamp(conc, 0, maxConc),
+                        max_concentration = math.max(1, maxConc)
+                    })
+                    chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Set concentration to: " .. conc .. "/" .. maxConc)
+                end
+            end)
+            
+            innerY = innerY + 35
+            
+            -- Quick action buttons
+            local btnY = innerY
+            CreateStyledButton(editPanel, "Reset Player", 10, btnY, 100, 28, function()
+                Derma_Query(
+                    "Are you sure you want to reset this player's data?",
+                    "Confirm Reset",
+                    "Yes", function()
+                        SendAdminCommand("reset_player", {
+                            player_index = AdminHUD.selectedPlayer
+                        })
+                    end,
+                    "No", function() end
+                )
+            end)
+            
+            CreateStyledButton(editPanel, "Full Heal", 115, btnY, 80, 28, function()
                 SendAdminCommand("set_player_stamina", {
                     player_index = AdminHUD.selectedPlayer,
                     stamina = playerData.max_stamina or 100,
                     max_stamina = playerData.max_stamina or 100
                 })
-            end
-        end)
+            end)
+            
+            CreateStyledButton(editPanel, "Max Level", 200, btnY, 80, 28, function()
+                SendAdminCommand("set_player_level", {
+                    player_index = AdminHUD.selectedPlayer,
+                    level = 100
+                })
+            end)
+            
+            btnY = btnY + 33
+            
+            CreateStyledButton(editPanel, "Give 1000 XP", 10, btnY, 100, 28, function()
+                SendAdminCommand("set_player_xp", {
+                    player_index = AdminHUD.selectedPlayer,
+                    xp = (playerData.xp or 0) + 1000
+                })
+            end)
+            
+            CreateStyledButton(editPanel, "Unlock All Forms", 115, btnY, 110, 28, function()
+                for i = 1, 5 do
+                    SendAdminCommand("unlock_form", {
+                        player_index = AdminHUD.selectedPlayer,
+                        form_id = playerData.breathing_type .. "_form_" .. i
+                    })
+                end
+            end)
+        end
     end
     
     -- Populate player list

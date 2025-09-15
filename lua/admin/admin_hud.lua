@@ -151,7 +151,24 @@ if SERVER then
                 if data then
                     data.stamina = args.stamina
                     data.max_stamina = args.max_stamina
+                    -- Update network vars
+                    target:SetNWInt("BreathingStamina", args.stamina)
+                    target:SetNWInt("BreathingMaxStamina", args.max_stamina)
                     ply:ChatPrint("[Admin] Updated " .. target:Name() .. "'s stamina")
+                end
+            end
+            
+        elseif cmd == "set_player_concentration" then
+            local target = Entity(args.player_index)
+            if IsValid(target) and target:IsPlayer() then
+                local data = BreathingSystem.PlayerRegistry.GetPlayerData(target)
+                if data then
+                    data.concentration = args.concentration
+                    data.max_concentration = args.max_concentration
+                    -- Update network vars if they exist
+                    target:SetNWInt("BreathingConcentration", args.concentration)
+                    target:SetNWInt("BreathingMaxConcentration", args.max_concentration)
+                    ply:ChatPrint("[Admin] Updated " .. target:Name() .. "'s concentration")
                 end
             end
             

@@ -42,8 +42,17 @@ function TOOL:LeftClick(trace)
         end
         
         -- Send command to server to open admin HUD
-        RunConsoleCommand("say", "!breathingadmin")
+        timer.Simple(0.1, function()
+            RunConsoleCommand("say", "!breathingadmin")
+        end)
         return true
+    end
+    
+    if SERVER then
+        -- Server-side check
+        if IsValid(self:GetOwner()) and (self:GetOwner():IsAdmin() or self:GetOwner():IsSuperAdmin()) then
+            return true
+        end
     end
     
     return false
@@ -129,7 +138,15 @@ function TOOL.BuildCPanel(panel)
     openBtn:SetText("Open Admin Panel")
     openBtn:SetTall(40)
     openBtn.DoClick = function()
-        RunConsoleCommand("say", "!breathingadmin")
+        -- Close the spawn menu first
+        if IsValid(g_SpawnMenu) then
+            g_SpawnMenu:Close()
+        end
+        
+        -- Then open the admin panel
+        timer.Simple(0.1, function()
+            RunConsoleCommand("say", "!breathingadmin")
+        end)
     end
     openBtn.Paint = function(self, w, h)
         local color = self:IsHovered() and Color(70, 150, 200) or Color(100, 200, 255)

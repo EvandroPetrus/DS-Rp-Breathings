@@ -19,6 +19,25 @@ concommand.Add("breathing_admin", function(ply, cmd, args)
     RunConsoleCommand("say", "!breathingadmin")
 end, nil, "Opens the Breathing System admin panel (admin only)")
 
+-- Direct admin panel opener (bypasses chat)
+concommand.Add("breathing_admin_direct", function(ply, cmd, args)
+    if not LocalPlayer():IsAdmin() and not LocalPlayer():IsSuperAdmin() then
+        chat.AddText(Color(255, 100, 100), "[BreathingSystem] ", Color(255, 255, 255), "You must be an admin to use this command!")
+        return
+    end
+    
+    -- Request data directly from server
+    net.Start("BreathingSystem_RequestAdminData")
+    net.SendToServer()
+    
+    -- Open with test data while waiting for server response
+    timer.Simple(0.5, function()
+        if not AdminHUD or not AdminHUD.isOpen then
+            RunConsoleCommand("breathingadmin_test")
+        end
+    end)
+end, nil, "Opens the admin panel directly (admin only)")
+
 -- Command to open player menu
 concommand.Add("breathing_menu", function(ply, cmd, args)
     RunConsoleCommand("bs_menu")
