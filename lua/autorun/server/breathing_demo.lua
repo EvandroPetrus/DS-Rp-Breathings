@@ -61,98 +61,6 @@ local DemoSequences = {
     }
 }
 
--- Function to demonstrate level up animations
-local function DemoLevelUpSequence(ply)
-    if not IsValid(ply) then return end
-    
-    ply:ChatPrint("")
-    ply:ChatPrint("=====================================")
-    ply:ChatPrint("🎯 LEVEL UP DEMONSTRATION")
-    ply:ChatPrint("=====================================")
-    ply:ChatPrint("")
-    
-    -- Reset player to low level for demonstration
-    if BreathingSystem and BreathingSystem.PlayerRegistry then
-        local playerData = BreathingSystem.PlayerRegistry.GetPlayerData(ply)
-        if playerData then
-            playerData.level = 1
-            playerData.xp = 0
-            ply:SetNWInt("BreathingLevel", 1)
-            ply:SetNWInt("BreathingXP", 0)
-        end
-    end
-    
-    -- Define milestone levels to showcase
-    local milestones = {
-        {level = 5, desc = "Novice → Apprentice", xp = 500},
-        {level = 10, desc = "Apprentice → Adept", xp = 1500},
-        {level = 25, desc = "Adept → Expert", xp = 5000},
-        {level = 50, desc = "Expert → Master", xp = 15000},
-        {level = 100, desc = "Master → Grandmaster", xp = 50000}
-    }
-    
-    local currentMilestone = 1
-    
-    local function ShowNextLevelUp()
-        if not IsValid(ply) or currentMilestone > #milestones then
-            -- Demo complete
-            if IsValid(ply) then
-                timer.Simple(1, function()
-                    if not IsValid(ply) then return end
-                    
-                    ply:ChatPrint("")
-                    ply:ChatPrint("=====================================")
-                    ply:ChatPrint("🏆 FULL DEMONSTRATION COMPLETE!")
-                    ply:ChatPrint("All systems showcased successfully.")
-                    ply:ChatPrint("=====================================")
-                    
-                    -- Reset to normal state
-                    ply:ConCommand("bs_switch water")
-                    
-                    if BreathingSystem and BreathingSystem.PlayerRegistry then
-                        local playerData = BreathingSystem.PlayerRegistry.GetPlayerData(ply)
-                        if playerData then
-                            playerData.level = 10
-                            playerData.xp = 1000
-                            ply:SetNWInt("BreathingLevel", 10)
-                            ply:SetNWInt("BreathingXP", 1000)
-                        end
-                    end
-                end)
-            end
-            return
-        end
-        
-        local milestone = milestones[currentMilestone]
-        
-        -- Announce the level up
-        ply:ChatPrint("⬆️ LEVEL UP: " .. milestone.desc)
-        ply:ChatPrint("📊 Reaching Level " .. milestone.level .. " (" .. milestone.xp .. " XP)")
-        
-        -- Trigger the level up
-        if BreathingSystem and BreathingSystem.PlayerRegistry then
-            local playerData = BreathingSystem.PlayerRegistry.GetPlayerData(ply)
-            if playerData then
-                -- Set the new level
-                playerData.level = milestone.level
-                playerData.xp = milestone.xp
-                ply:SetNWInt("BreathingLevel", milestone.level)
-                ply:SetNWInt("BreathingXP", milestone.xp)
-                
-                -- Trigger level up effects
-                TriggerLevelUpEffects(ply, milestone.level)
-            end
-        end
-        
-        -- Schedule next milestone
-        currentMilestone = currentMilestone + 1
-        timer.Simple(2, ShowNextLevelUp)
-    end
-    
-    -- Start the sequence
-    timer.Simple(1, ShowNextLevelUp)
-end
-
 -- Function to trigger level up visual and audio effects
 local function TriggerLevelUpEffects(ply, level)
     if not IsValid(ply) then return end
@@ -252,6 +160,98 @@ local function TriggerLevelUpEffects(ply, level)
     elseif level == 100 then
         ply:ChatPrint("🔓 Unlocked: Create Custom Forms!")
     end
+end
+
+-- Function to demonstrate level up animations
+local function DemoLevelUpSequence(ply)
+    if not IsValid(ply) then return end
+    
+    ply:ChatPrint("")
+    ply:ChatPrint("=====================================")
+    ply:ChatPrint("🎯 LEVEL UP DEMONSTRATION")
+    ply:ChatPrint("=====================================")
+    ply:ChatPrint("")
+    
+    -- Reset player to low level for demonstration
+    if BreathingSystem and BreathingSystem.PlayerRegistry then
+        local playerData = BreathingSystem.PlayerRegistry.GetPlayerData(ply)
+        if playerData then
+            playerData.level = 1
+            playerData.xp = 0
+            ply:SetNWInt("BreathingLevel", 1)
+            ply:SetNWInt("BreathingXP", 0)
+        end
+    end
+    
+    -- Define milestone levels to showcase
+    local milestones = {
+        {level = 5, desc = "Novice → Apprentice", xp = 500},
+        {level = 10, desc = "Apprentice → Adept", xp = 1500},
+        {level = 25, desc = "Adept → Expert", xp = 5000},
+        {level = 50, desc = "Expert → Master", xp = 15000},
+        {level = 100, desc = "Master → Grandmaster", xp = 50000}
+    }
+    
+    local currentMilestone = 1
+    
+    local function ShowNextLevelUp()
+        if not IsValid(ply) or currentMilestone > #milestones then
+            -- Demo complete
+            if IsValid(ply) then
+                timer.Simple(1, function()
+                    if not IsValid(ply) then return end
+                    
+                    ply:ChatPrint("")
+                    ply:ChatPrint("=====================================")
+                    ply:ChatPrint("🏆 FULL DEMONSTRATION COMPLETE!")
+                    ply:ChatPrint("All systems showcased successfully.")
+                    ply:ChatPrint("=====================================")
+                    
+                    -- Reset to normal state
+                    ply:ConCommand("bs_switch water")
+                    
+                    if BreathingSystem and BreathingSystem.PlayerRegistry then
+                        local playerData = BreathingSystem.PlayerRegistry.GetPlayerData(ply)
+                        if playerData then
+                            playerData.level = 10
+                            playerData.xp = 1000
+                            ply:SetNWInt("BreathingLevel", 10)
+                            ply:SetNWInt("BreathingXP", 1000)
+                        end
+                    end
+                end)
+            end
+            return
+        end
+        
+        local milestone = milestones[currentMilestone]
+        
+        -- Announce the level up
+        ply:ChatPrint("⬆️ LEVEL UP: " .. milestone.desc)
+        ply:ChatPrint("📊 Reaching Level " .. milestone.level .. " (" .. milestone.xp .. " XP)")
+        
+        -- Trigger the level up
+        if BreathingSystem and BreathingSystem.PlayerRegistry then
+            local playerData = BreathingSystem.PlayerRegistry.GetPlayerData(ply)
+            if playerData then
+                -- Set the new level
+                playerData.level = milestone.level
+                playerData.xp = milestone.xp
+                ply:SetNWInt("BreathingLevel", milestone.level)
+                ply:SetNWInt("BreathingXP", milestone.xp)
+                
+                -- Trigger level up effects
+                TriggerLevelUpEffects(ply, milestone.level)
+            end
+        end
+        
+        -- Schedule next milestone
+        currentMilestone = currentMilestone + 1
+        timer.Simple(2, ShowNextLevelUp)
+    end
+    
+    -- Start the sequence
+    timer.Simple(1, ShowNextLevelUp)
 end
 
 -- Function to display demo information
