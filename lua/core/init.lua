@@ -78,26 +78,41 @@ if CLIENT then
     include("ui/menus.lua")
 end
 
--- Global API functions
+-- Global API functions with error handling
 function BreathingSystem.GetPlayerData(ply)
     if not IsValid(ply) then return nil end
+    if not BreathingSystem.PlayerRegistry or not BreathingSystem.PlayerRegistry.GetPlayerData then
+        return nil
+    end
     return BreathingSystem.PlayerRegistry.GetPlayerData(ply)
 end
 
 function BreathingSystem.SetPlayerBreathing(ply, breathingType)
     if not IsValid(ply) then return false end
+    if not BreathingSystem.PlayerRegistry or not BreathingSystem.PlayerRegistry.SetPlayerBreathing then
+        return false
+    end
     return BreathingSystem.PlayerRegistry.SetPlayerBreathing(ply, breathingType)
 end
 
 function BreathingSystem.RegisterBreathingType(name, config)
+    if not BreathingSystem.BreathingTypes or not BreathingSystem.BreathingTypes.RegisterType then
+        return false
+    end
     return BreathingSystem.BreathingTypes.RegisterType(name, config)
 end
 
 function BreathingSystem.GetBreathingTypes()
+    if not BreathingSystem.BreathingTypes or not BreathingSystem.BreathingTypes.GetAllTypes then
+        return {}
+    end
     return BreathingSystem.BreathingTypes.GetAllTypes()
 end
 
 function BreathingSystem.GetForms(breathingType)
+    if not BreathingSystem.BreathingTypes or not BreathingSystem.BreathingTypes.GetForms then
+        return {}
+    end
     return BreathingSystem.BreathingTypes.GetForms(breathingType)
 end
 
@@ -119,7 +134,13 @@ if SERVER then
         ply:ChatPrint("XP: " .. (playerData.xp or 0))
         ply:ChatPrint("Stamina: " .. (playerData.stamina or 100))
         ply:ChatPrint("Concentration: " .. (playerData.concentration or 0))
-        ply:ChatPrint("Active particles: " .. table.Count(BreathingSystem.Particles.GetActiveEffects(ply)))
+        
+        if BreathingSystem.Particles and BreathingSystem.Particles.GetActiveEffects then
+            ply:ChatPrint("Active particles: " .. table.Count(BreathingSystem.Particles.GetActiveEffects(ply)))
+        else
+            ply:ChatPrint("Active particles: 0")
+        end
+        
         ply:ChatPrint("========================")
     end)
     
@@ -189,10 +210,14 @@ if SERVER then
         end
         
         local formID = args[1]
-        local damage = BreathingSystem.Mechanics.CalculateDamage(ply, formID)
+        local damage = "Cannot calculate"
+        
+        if BreathingSystem.Mechanics and BreathingSystem.Mechanics.CalculateDamage then
+            damage = BreathingSystem.Mechanics.CalculateDamage(ply, formID) or "Cannot calculate"
+        end
         
         ply:ChatPrint("Form: " .. formID)
-        ply:ChatPrint("Damage: " .. (damage or "Cannot calculate"))
+        ply:ChatPrint("Damage: " .. tostring(damage))
     end)
     
     concommand.Add("breathingsystem_test_effects", function(ply, cmd, args)
@@ -206,18 +231,30 @@ if SERVER then
         local formID = args[2]
         
         if effectType == "particles" then
-            if formID then
-                BreathingSystem.Particles.CreateFormEffect(ply, formID)
+            if BreathingSystem.Particles then
+                if formID then
+                    BreathingSystem.Particles.CreateFormEffect(ply, formID)
+                else
+                    BreathingSystem.Particles.CreateBreathingTypeEffect(ply, "water")
+                end
+                ply:ChatPrint("[BreathingSystem] Particle effect test started!")
             else
-                BreathingSystem.Particles.CreateBreathingTypeEffect(ply, "water")
+                ply:ChatPrint("[BreathingSystem] Particle system not available!")
             end
-            ply:ChatPrint("[BreathingSystem] Particle effect test started!")
         elseif effectType == "sounds" then
-            BreathingSystem.Sounds.PlaySound(ply, "breathing_type", "water")
-            ply:ChatPrint("[BreathingSystem] Sound effect test started!")
+            if BreathingSystem.Sounds then
+                BreathingSystem.Sounds.PlaySound(ply, "breathing_type", "water")
+                ply:ChatPrint("[BreathingSystem] Sound effect test started!")
+            else
+                ply:ChatPrint("[BreathingSystem] Sound system not available!")
+            end
         elseif effectType == "animations" then
-            BreathingSystem.Animations.PlayAnimation(ply, "breathing_type", "water")
-            ply:ChatPrint("[BreathingSystem] Animation test started!")
+            if BreathingSystem.Animations then
+                BreathingSystem.Animations.PlayAnimation(ply, "breathing_type", "water")
+                ply:ChatPrint("[BreathingSystem] Animation test started!")
+            else
+                ply:ChatPrint("[BreathingSystem] Animation system not available!")
+            end
         else
             ply:ChatPrint("Unknown effect type: " .. effectType)
         end
