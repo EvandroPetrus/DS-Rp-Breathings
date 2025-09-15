@@ -278,6 +278,12 @@ function CreatePlayersTab()
         RequestAdminData()
     end)
     
+    -- Debug button
+    local debugBtn = CreateStyledButton(parent, "Debug", 315, 70, 60, 30, function()
+        SendAdminCommand("debug_modules", {})
+        chat.AddText(Color(100, 200, 255), "[Admin] ", Color(255, 255, 255), "Check console for module status")
+    end)
+    
     -- Player list
     local playerList = vgui.Create("DScrollPanel", parent)
     playerList:SetPos(20, 110)
@@ -602,12 +608,10 @@ function CreatePlayersTab()
             end)
             
             CreateStyledButton(editPanel, "Unlock All Forms", 115, btnY, 110, 28, function()
-                for i = 1, 5 do
-                    SendAdminCommand("unlock_form", {
-                        player_index = AdminHUD.selectedPlayer,
-                        form_id = playerData.breathing_type .. "_form_" .. i
-                    })
-                end
+                SendAdminCommand("unlock_all_forms", {
+                    player_index = AdminHUD.selectedPlayer
+                })
+                chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Unlocking all forms for player...")
             end)
         end
     end
@@ -914,29 +918,10 @@ function CreateFormsTab()
     local filterY = 70
     local filters = {"all", "water", "fire", "thunder", "stone", "wind"}
     local selectedFilter = "all"
+    local filterButtons = {}
     
-    for i, filter in ipairs(filters) do
-        local filterBtn = CreateStyledButton(parent, string.upper(filter), 20 + (i-1) * 80, filterY, 75, 25, function()
-            selectedFilter = filter
-            UpdateFormsList()
-        end)
-    end
-    
-    -- Forms list
-    local formsList = vgui.Create("DListView", parent)
-    formsList:SetPos(20, 105)
-    formsList:SetSize(parent:GetWide() - 40, parent:GetTall() - 185)
-    formsList:SetMultiSelect(false)
-    
-    formsList:AddColumn("Form Name"):SetWidth(250)
-    formsList:AddColumn("Type"):SetWidth(80)
-    formsList:AddColumn("Damage"):SetWidth(70)
-    formsList:AddColumn("Stamina"):SetWidth(70)
-    formsList:AddColumn("Cooldown"):SetWidth(70)
-    formsList:AddColumn("ID"):SetWidth(150)
-    
-    -- Function to update forms list based on filter
-    function UpdateFormsList()
+    -- Function to update forms list based on filter (define it early)
+    local function UpdateFormsList()
         formsList:Clear()
         
         for id, formData in pairs(AdminHUD.data.forms or {}) do
@@ -979,7 +964,51 @@ function CreateFormsTab()
                 draw.RoundedBox(4, 2, 2, 4, h - 4, typeColor)
             end
         end
+        
+        -- Update button colors
+        for filter, btn in pairs(filterButtons) do
+            if IsValid(btn) then
+                btn.isActive = (filter == selectedFilter)
+            end
+        end
     end
+    
+    for i, filter in ipairs(filters) do
+        local filterBtn = vgui.Create("DButton", parent)
+        filterBtn:SetPos(20 + (i-1) * 80, filterY)
+        filterBtn:SetSize(75, 25)
+        filterBtn:SetText(string.upper(filter))
+        filterBtn.isActive = (filter == selectedFilter)
+        
+        filterBtn.Paint = function(self, w, h)
+            local color = self.isActive and Colors.accent or (self:IsHovered() and Colors.buttonHover or Colors.button)
+            draw.RoundedBox(4, 0, 0, w, h, color)
+            
+            local textColor = self.isActive and Color(255, 255, 255) or Colors.text
+            draw.SimpleText(self:GetText(), "BreathingAdmin_Text", w/2, h/2, textColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        
+        filterBtn.DoClick = function()
+            selectedFilter = filter
+            UpdateFormsList()
+            surface.PlaySound("UI/buttonclick.wav")
+        end
+        
+        filterButtons[filter] = filterBtn
+    end
+    
+    -- Forms list
+    local formsList = vgui.Create("DListView", parent)
+    formsList:SetPos(20, 105)
+    formsList:SetSize(parent:GetWide() - 40, parent:GetTall() - 185)
+    formsList:SetMultiSelect(false)
+    
+    formsList:AddColumn("Form Name"):SetWidth(250)
+    formsList:AddColumn("Type"):SetWidth(80)
+    formsList:AddColumn("Damage"):SetWidth(70)
+    formsList:AddColumn("Stamina"):SetWidth(70)
+    formsList:AddColumn("Cooldown"):SetWidth(70)
+    formsList:AddColumn("ID"):SetWidth(150)
     
     -- Initial population
     UpdateFormsList()

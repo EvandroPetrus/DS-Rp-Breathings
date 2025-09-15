@@ -252,9 +252,21 @@ if SERVER then
             
         elseif cmd == "set_balance" then
             if BreathingSystem.Balance then
-                BreathingSystem.Balance.SetValue(args.category, args.key, args.value)
-                BreathingSystem.Balance.ApplyBalance()
-                ply:ChatPrint("[Admin] Set balance " .. args.category .. "." .. args.key .. " = " .. tostring(args.value))
+                local success = BreathingSystem.Balance.SetValue(args.category, args.key, args.value)
+                if success then
+                    BreathingSystem.Balance.ApplyBalance()
+                    ply:ChatPrint("[Admin] Set balance " .. args.category .. "." .. args.key .. " = " .. tostring(args.value))
+                    
+                    -- Log the change
+                    if BreathingSystem.Logging then
+                        BreathingSystem.Logging.LogPlayer("INFO", "Admin changed balance: " .. args.category .. "." .. args.key .. " = " .. tostring(args.value), ply, "Admin")
+                    end
+                else
+                    ply:ChatPrint("[Admin] Failed to set balance value!")
+                end
+            else
+                ply:ChatPrint("[Admin] Balance system not initialized!")
+                print("[BreathingSystem] Balance module not found!")
             end
             
         elseif cmd == "reset_balance" then
@@ -294,9 +306,50 @@ if SERVER then
             
         elseif cmd == "test_form" then
             local target = Entity(args.player_index)
-            if IsValid(target) and target:IsPlayer() and BreathingSystem.Forms then
-                BreathingSystem.Forms.UseForm(target, args.form_id)
-                ply:ChatPrint("[Admin] Testing form " .. args.form_id .. " on " .. target:Name())
+            if IsValid(target) and target:IsPlayer() then
+                -- Extract form number from form_id or use provided form_number
+                local formNum = args.form_number or 1
+                local breathingType = args.form_id and string.match(args.form_id, "^(%w+)_form") or nil
+                
+                -- Get player's current breathing type if not specified
+                local playerData = BreathingSystem.PlayerRegistry.GetPlayerData(target)
+                if not breathingType and playerData then
+                    breathingType = playerData.breathing_type
+                end
+                
+                if breathingType and breathingType ~= "none" then
+                    -- Force the player to use the form
+                    target:ConCommand("bs_form " .. formNum)
+                    
+                    -- Also trigger effects directly if available
+                    if BreathingSystem.CreateFormEffect then
+                        BreathingSystem.CreateFormEffect(target, breathingType, args.form_id)
+                    end
+                    
+                    ply:ChatPrint("[Admin] Testing form " .. (args.form_id or formNum) .. " on " .. target:Name())
+                else
+                    ply:ChatPrint("[Admin] Player needs a breathing type first!")
+                end
+            end
+            
+        elseif cmd == "unlock_all_forms" then
+            local target = Entity(args.player_index)
+            if IsValid(target) and target:IsPlayer() then
+                local data = BreathingSystem.PlayerRegistry.GetPlayerData(target)
+                if data then
+                    data.forms_unlocked = data.forms_unlocked or {}
+                    
+                    -- Unlock all forms for their current breathing type
+                    local breathingType = data.breathing_type or "water"
+                    for i = 1, 5 do
+                        local formId = breathingType .. "_form_" .. i
+                        if not table.HasValue(data.forms_unlocked, formId) then
+                            table.insert(data.forms_unlocked, formId)
+                        end
+                    end
+                    
+                    ply:ChatPrint("[Admin] Unlocked all " .. breathingType .. " forms for " .. target:Name())
+                end
             end
             
         elseif cmd == "refresh_data" then
@@ -306,6 +359,22 @@ if SERVER then
                     ply:ConCommand("breathingadmin_refresh")
                 end
             end)
+            
+        elseif cmd == "debug_modules" then
+            -- Debug command to check loaded modules
+            ply:ChatPrint("[Admin] Checking loaded modules...")
+            ply:ChatPrint("- BreathingSystem: " .. (BreathingSystem and "YES" or "NO"))
+            ply:ChatPrint("- PlayerRegistry: " .. (BreathingSystem.PlayerRegistry and "YES" or "NO"))
+            ply:ChatPrint("- Balance: " .. (BreathingSystem.Balance and "YES" or "NO"))
+            ply:ChatPrint("- Logging: " .. (BreathingSystem.Logging and "YES" or "NO"))
+            ply:ChatPrint("- CreateFormEffect: " .. (BreathingSystem.CreateFormEffect and "YES" or "NO"))
+            
+            -- Also print to console
+            print("[BreathingSystem] Module Status:")
+            print("  - Main: " .. tostring(BreathingSystem ~= nil))
+            print("  - PlayerRegistry: " .. tostring(BreathingSystem.PlayerRegistry ~= nil))
+            print("  - Balance: " .. tostring(BreathingSystem.Balance ~= nil))
+            print("  - Logging: " .. tostring(BreathingSystem.Logging ~= nil))
         end
     end)
     
