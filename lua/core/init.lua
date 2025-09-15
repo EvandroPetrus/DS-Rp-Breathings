@@ -4,18 +4,6 @@
     
     This is the main entry point for the BreathingSystem addon.
     Handles initialization, module loading, and provides the global API.
-    
-    Responsibilities:
-    - Initialize the global BreathingSystem table
-    - Load core modules (server-side)
-    - AddCSLuaFile client modules
-    - Set up basic permissions system
-    - Provide test commands for debugging
-    
-    Example Usage:
-    - BreathingSystem.GetPlayerData(ply) - Get player breathing data
-    - BreathingSystem.SetPlayerBreathing(ply, "normal") - Set breathing type
-    - BreathingSystem.RegisterBreathingType("meditation", {...}) - Register new type
 ]]
 
 -- Global table initialization
@@ -116,96 +104,214 @@ function BreathingSystem.GetForms(breathingType)
     return BreathingSystem.BreathingTypes.GetForms(breathingType)
 end
 
+-- Helper function to find player by partial name
+function BreathingSystem.FindPlayer(name)
+    name = string.lower(name)
+    for _, ply in ipairs(player.GetAll()) do
+        if string.find(string.lower(ply:Name()), name, 1, true) then
+            return ply
+        end
+    end
+    return nil
+end
+
 -- Test commands (server-side only)
 if SERVER then
     concommand.Add("breathingsystem_test", function(ply, cmd, args)
-        if not IsValid(ply) then return end
+        -- Allow console to run this command
+        if not IsValid(ply) and not game.IsDedicated() then 
+            ply = player.GetAll()[1] -- Get first player if running from console
+            if not IsValid(ply) then
+                print("[BreathingSystem] No players connected!")
+                return
+            end
+        end
         
         local playerData = BreathingSystem.GetPlayerData(ply)
         if not playerData then
-            ply:ChatPrint("[BreathingSystem] No player data found!")
-            return
+            -- Initialize player data if it doesn't exist
+            if BreathingSystem.PlayerRegistry and BreathingSystem.PlayerRegistry.RegisterPlayer then
+                BreathingSystem.PlayerRegistry.RegisterPlayer(ply)
+                playerData = BreathingSystem.GetPlayerData(ply)
+            end
+            
+            if not playerData then
+                if IsValid(ply) then
+                    ply:ChatPrint("[BreathingSystem] No player data found! Initializing...")
+                else
+                    print("[BreathingSystem] No player data found! Initializing...")
+                end
+                return
+            end
         end
         
-        ply:ChatPrint("=== BreathingSystem Test ===")
-        ply:ChatPrint("Player: " .. ply:Name())
-        ply:ChatPrint("Breathing Type: " .. (playerData.breathing_type or "None"))
-        ply:ChatPrint("Level: " .. (playerData.level or 1))
-        ply:ChatPrint("XP: " .. (playerData.xp or 0))
-        ply:ChatPrint("Stamina: " .. (playerData.stamina or 100))
-        ply:ChatPrint("Concentration: " .. (playerData.concentration or 0))
+        local output = {
+            "=== BreathingSystem Test ===",
+            "Player: " .. ply:Name(),
+            "Breathing Type: " .. (playerData.breathing_type or "None"),
+            "Level: " .. (playerData.level or 1),
+            "XP: " .. (playerData.xp or 0),
+            "Stamina: " .. (playerData.stamina or 100),
+            "Concentration: " .. (playerData.concentration or 0)
+        }
         
         if BreathingSystem.Particles and BreathingSystem.Particles.GetActiveEffects then
-            ply:ChatPrint("Active particles: " .. table.Count(BreathingSystem.Particles.GetActiveEffects(ply)))
+            table.insert(output, "Active particles: " .. table.Count(BreathingSystem.Particles.GetActiveEffects(ply)))
         else
-            ply:ChatPrint("Active particles: 0")
+            table.insert(output, "Active particles: 0")
         end
         
-        ply:ChatPrint("========================")
+        table.insert(output, "========================")
+        
+        for _, line in ipairs(output) do
+            if IsValid(ply) then
+                ply:ChatPrint(line)
+            else
+                print(line)
+            end
+        end
     end)
     
     concommand.Add("breathingsystem_set", function(ply, cmd, args)
-        if not IsValid(ply) then return end
+        -- Allow console to run this command
+        local isConsole = not IsValid(ply)
+        
         if #args < 2 then
-            ply:ChatPrint("Usage: breathingsystem_set <player_name> <breathing_type>")
+            local msg = "Usage: breathingsystem_set <player_name> <breathing_type>"
+            if isConsole then
+                print(msg)
+            else
+                ply:ChatPrint(msg)
+            end
             return
         end
         
         local targetName = args[1]
         local breathingType = args[2]
         
-        local target = player.GetByName(targetName)
+        -- Find player by partial name match
+        local target = BreathingSystem.FindPlayer(targetName)
+        
+        -- If still not found, try to get by exact name
+        if not target then
+            for _, p in ipairs(player.GetAll()) do
+                if p:Name() == targetName then
+                    target = p
+                    break
+                end
+            end
+        end
+        
+        -- If still not found, try to get the command caller if they're setting for themselves
+        if not target and not isConsole and (targetName == "me" or targetName == "self") then
+            target = ply
+        end
+        
         if not IsValid(target) then
-            ply:ChatPrint("Player not found: " .. targetName)
+            local msg = "Player not found: " .. targetName .. ". Try using a partial name or 'me' for yourself."
+            if isConsole then
+                print(msg)
+            else
+                ply:ChatPrint(msg)
+            end
             return
+        end
+        
+        -- Initialize player data if needed
+        if BreathingSystem.PlayerRegistry and BreathingSystem.PlayerRegistry.RegisterPlayer then
+            BreathingSystem.PlayerRegistry.RegisterPlayer(target)
         end
         
         local success = BreathingSystem.SetPlayerBreathing(target, breathingType)
         if success then
-            ply:ChatPrint("Set " .. target:Name() .. " breathing type to: " .. breathingType)
+            local msg = "Set " .. target:Name() .. " breathing type to: " .. breathingType
+            if isConsole then
+                print(msg)
+            else
+                ply:ChatPrint(msg)
+            end
             target:ChatPrint("Your breathing type has been set to: " .. breathingType)
         else
-            ply:ChatPrint("Failed to set breathing type!")
+            local msg = "Failed to set breathing type! Valid types: water, fire, thunder, stone, wind"
+            if isConsole then
+                print(msg)
+            else
+                ply:ChatPrint(msg)
+            end
         end
     end)
     
     concommand.Add("breathingsystem_list_types", function(ply, cmd, args)
-        if not IsValid(ply) then return end
+        local isConsole = not IsValid(ply)
         
         local types = BreathingSystem.GetBreathingTypes()
-        ply:ChatPrint("=== Available Breathing Types ===")
+        local output = {"=== Available Breathing Types ==="}
+        
         for name, data in pairs(types) do
-            ply:ChatPrint("- " .. name .. ": " .. (data.description or "No description"))
+            table.insert(output, "- " .. name .. ": " .. (data.description or "No description"))
         end
-        ply:ChatPrint("================================")
+        table.insert(output, "================================")
+        
+        for _, line in ipairs(output) do
+            if isConsole then
+                print(line)
+            else
+                ply:ChatPrint(line)
+            end
+        end
     end)
     
     concommand.Add("breathingsystem_list_forms", function(ply, cmd, args)
-        if not IsValid(ply) then return end
+        local isConsole = not IsValid(ply)
+        
         if #args < 1 then
-            ply:ChatPrint("Usage: breathingsystem_list_forms <breathing_type>")
+            local msg = "Usage: breathingsystem_list_forms <breathing_type>"
+            if isConsole then
+                print(msg)
+            else
+                ply:ChatPrint(msg)
+            end
             return
         end
         
         local breathingType = args[1]
         local forms = BreathingSystem.GetForms(breathingType)
         
-        if not forms then
-            ply:ChatPrint("Breathing type not found: " .. breathingType)
+        if not forms or table.Count(forms) == 0 then
+            local msg = "Breathing type not found or has no forms: " .. breathingType
+            if isConsole then
+                print(msg)
+            else
+                ply:ChatPrint(msg)
+            end
             return
         end
         
-        ply:ChatPrint("=== " .. breathingType .. " Forms ===")
+        local output = {"=== " .. breathingType .. " Forms ==="}
         for id, form in pairs(forms) do
-            ply:ChatPrint("- " .. id .. ": " .. (form.name or "Unnamed"))
+            table.insert(output, "- " .. id .. ": " .. (form.name or "Unnamed"))
         end
-        ply:ChatPrint("================================")
+        table.insert(output, "================================")
+        
+        for _, line in ipairs(output) do
+            if isConsole then
+                print(line)
+            else
+                ply:ChatPrint(line)
+            end
+        end
     end)
     
     concommand.Add("breathingsystem_test_damage", function(ply, cmd, args)
-        if not IsValid(ply) then return end
+        local isConsole = not IsValid(ply)
+        
         if #args < 1 then
-            ply:ChatPrint("Usage: breathingsystem_test_damage <form_id>")
+            local msg = "Usage: breathingsystem_test_damage <form_id>"
+            if isConsole then
+                print(msg)
+            else
+                ply:ChatPrint(msg)
+            end
             return
         end
         
@@ -213,79 +319,23 @@ if SERVER then
         local damage = "Cannot calculate"
         
         if BreathingSystem.Mechanics and BreathingSystem.Mechanics.CalculateDamage then
-            damage = BreathingSystem.Mechanics.CalculateDamage(ply, formID) or "Cannot calculate"
-        end
-        
-        ply:ChatPrint("Form: " .. formID)
-        ply:ChatPrint("Damage: " .. tostring(damage))
-    end)
-    
-    concommand.Add("breathingsystem_test_effects", function(ply, cmd, args)
-        if not IsValid(ply) then return end
-        if #args < 1 then
-            ply:ChatPrint("Usage: breathingsystem_test_effects <effect_type> [form_id]")
-            return
-        end
-        
-        local effectType = args[1]
-        local formID = args[2]
-        
-        if effectType == "particles" then
-            if BreathingSystem.Particles then
-                if formID then
-                    BreathingSystem.Particles.CreateFormEffect(ply, formID)
-                else
-                    BreathingSystem.Particles.CreateBreathingTypeEffect(ply, "water")
-                end
-                ply:ChatPrint("[BreathingSystem] Particle effect test started!")
-            else
-                ply:ChatPrint("[BreathingSystem] Particle system not available!")
+            if not isConsole then
+                damage = BreathingSystem.Mechanics.CalculateDamage(ply, formID) or "Cannot calculate"
             end
-        elseif effectType == "sounds" then
-            if BreathingSystem.Sounds then
-                BreathingSystem.Sounds.PlaySound(ply, "breathing_type", "water")
-                ply:ChatPrint("[BreathingSystem] Sound effect test started!")
-            else
-                ply:ChatPrint("[BreathingSystem] Sound system not available!")
-            end
-        elseif effectType == "animations" then
-            if BreathingSystem.Animations then
-                BreathingSystem.Animations.PlayAnimation(ply, "breathing_type", "water")
-                ply:ChatPrint("[BreathingSystem] Animation test started!")
-            else
-                ply:ChatPrint("[BreathingSystem] Animation system not available!")
-            end
-        else
-            ply:ChatPrint("Unknown effect type: " .. effectType)
-        end
-    end)
-    
-    concommand.Add("breathingsystem_menu", function(ply, cmd, args)
-        if not IsValid(ply) then return end
-        if #args < 1 then
-            ply:ChatPrint("Usage: breathingsystem_menu <menu_type>")
-            return
         end
         
-        local menuType = args[1]
-        ply:ChatPrint("Opening " .. menuType .. " menu...")
-        -- Menu opening would be handled client-side
-    end)
-    
-    concommand.Add("breathingsystem_balance_report", function(ply, cmd, args)
-        if not IsValid(ply) then return end
+        local output = {
+            "Form: " .. formID,
+            "Damage: " .. tostring(damage)
+        }
         
-        ply:ChatPrint("=== Balance Report ===")
-        ply:ChatPrint("This would show balance configuration")
-        ply:ChatPrint("=====================")
-    end)
-    
-    concommand.Add("breathingsystem_logs", function(ply, cmd, args)
-        if not IsValid(ply) then return end
-        
-        ply:ChatPrint("=== Recent Logs ===")
-        ply:ChatPrint("This would show recent system logs")
-        ply:ChatPrint("==================")
+        for _, line in ipairs(output) do
+            if isConsole then
+                print(line)
+            else
+                ply:ChatPrint(line)
+            end
+        end
     end)
     
     print("[BreathingSystem] Test commands registered!")
