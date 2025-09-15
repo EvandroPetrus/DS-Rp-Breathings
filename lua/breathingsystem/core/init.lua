@@ -62,10 +62,15 @@ if SERVER then
     include("breathingsystem/combat/status_effects.lua")
     include("breathingsystem/combat/counters.lua")
     
+    -- Load UI modules
+    include("breathingsystem/ui/hud.lua")
+    include("breathingsystem/ui/menus.lua")
+    include("breathingsystem/ui/keybinds.lua")
+    
     -- AddCSLuaFile for client modules (when we add them in future phases)
     -- AddCSLuaFile("breathingsystem/client/...")
     
-    print("[BreathingSystem] Core modules, breathing types, mechanics, progression, effects, and combat loaded successfully")
+    print("[BreathingSystem] Core modules, breathing types, mechanics, progression, effects, combat, and UI loaded successfully")
 end
 
 -- Basic permissions system
@@ -136,6 +141,11 @@ if SERVER then
         print("[BreathingSystem] Combat status:")
         print("  - In combat: " .. (BreathingSystem.Combat.IsInCombat(ply) and "Yes" or "No"))
         print("  - Active effects: " .. table.Count(BreathingSystem.StatusEffects.GetActiveEffects(ply)))
+        
+        -- Test UI
+        print("[BreathingSystem] UI status:")
+        print("  - HUD enabled: " .. (playerData.hud_enabled ~= false and "Yes" or "No"))
+        print("  - Keybinds: " .. table.Count(BreathingSystem.Keybinds.GetAllKeybinds(ply)))
         
         ply:ChatPrint("[BreathingSystem] Test completed! Check console for details.")
     end)
@@ -354,7 +364,31 @@ if SERVER then
         end
     end)
     
-    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration, breathingsystem_test_effects, breathingsystem_test_combat, breathingsystem_test_status")
+    -- Command to show menus
+    concommand.Add("breathingsystem_menu", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if #args < 1 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_menu <menu_type>")
+            return
+        end
+        
+        local menuType = args[1]
+        
+        if menuType == "breathing" then
+            BreathingSystem.Menus.ShowBreathingMenu(ply)
+        elseif menuType == "forms" then
+            BreathingSystem.Menus.ShowFormsMenu(ply)
+        elseif menuType == "training" then
+            BreathingSystem.Menus.ShowTrainingMenu(ply)
+        elseif menuType == "progression" then
+            BreathingSystem.Menus.ShowProgressionMenu(ply)
+        else
+            ply:ChatPrint("[BreathingSystem] Invalid menu type: " .. menuType)
+        end
+    end)
+    
+    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration, breathingsystem_test_effects, breathingsystem_test_combat, breathingsystem_test_status, breathingsystem_menu")
 end
 
 -- Initialize default breathing types
