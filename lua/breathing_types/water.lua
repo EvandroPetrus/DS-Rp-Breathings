@@ -3,14 +3,10 @@
     =====================================
     
     Water breathing focuses on fluidity, adaptability, and healing.
-    Forms are inspired by water's properties: flow, pressure, and life-giving nature.
-    
-    Characteristics:
-    - High healing and regeneration
-    - Fluid, adaptable movements
-    - Water-based visual effects
-    - Focus on defense and support
 ]]
+
+-- Only run on server
+if not SERVER then return end
 
 -- Water Breathing Type Configuration
 local typeID = "water"
@@ -50,65 +46,54 @@ local forms = {
     {
         id = "water_surface_slash",
         name = "Water Surface Slash",
-        description = "A basic water breathing form that mimics the gentle flow of water",
-        difficulty = 1,
-        duration = 0,
-        cooldown = 0,
+        description = "A horizontal slash that creates a blade of water",
+        breathing_type = typeID,
+        form_number = 1,
         
-        stamina_drain = 0,
-        concentration_bonus = 1,
-        damage_modifier = 0.9,
-        speed_modifier = 1.0,
+        -- Form properties
+        damage = 25,
+        stamina_cost = 10,
+        concentration_cost = 5,
+        cooldown = 3,
+        range = 150,
         
-        instructions = {
-            "Breathe in slowly like drawing water",
-            "Exhale smoothly like water flowing",
-            "Move with fluid, gentle motions",
-            "Focus on the water's calmness"
-        },
-        
-        effects = {
-            particle_effect = "water_surface_particles",
-            sound_effect = "water_flow_sound",
-            screen_effect = "water_ripple_screen"
-        },
-        
+        -- Requirements
         requirements = {
             level = 1,
-            previous_forms = {}
+            forms = {}
+        },
+        
+        -- Visual effects
+        effects = {
+            particle = "water_slash",
+            sound = "water_swoosh",
+            animation = "slash_horizontal"
         }
     },
     
     -- Form 2: Water Wheel
     {
-        id = "water_wheel",
+        id = "water_water_wheel",
         name = "Water Wheel",
-        description = "A circular breathing form that creates a protective water barrier",
-        difficulty = 2,
-        duration = 30,
-        cooldown = 15,
+        description = "A spinning attack that creates a wheel of water",
+        breathing_type = typeID,
+        form_number = 2,
         
-        stamina_drain = 1,
-        concentration_bonus = 2,
-        damage_modifier = 0.8,
-        speed_modifier = 0.95,
-        
-        instructions = {
-            "Inhale while raising your arms in a circle",
-            "Hold your breath as you complete the circle",
-            "Exhale while lowering your arms",
-            "Visualize water flowing around you"
-        },
-        
-        effects = {
-            particle_effect = "water_wheel_particles",
-            sound_effect = "water_wheel_sound",
-            screen_effect = "water_wheel_screen"
-        },
+        damage = 35,
+        stamina_cost = 15,
+        concentration_cost = 8,
+        cooldown = 5,
+        range = 100,
         
         requirements = {
             level = 3,
-            previous_forms = {"water_surface_slash"}
+            forms = {"water_surface_slash"}
+        },
+        
+        effects = {
+            particle = "water_wheel",
+            sound = "water_spin",
+            animation = "spin_attack"
         }
     },
     
@@ -116,32 +101,25 @@ local forms = {
     {
         id = "water_flowing_dance",
         name = "Flowing Dance",
-        description = "A graceful form that enhances movement and healing",
-        difficulty = 3,
-        duration = 60,
-        cooldown = 30,
+        description = "A graceful series of movements that flow like water",
+        breathing_type = typeID,
+        form_number = 3,
         
-        stamina_drain = 2,
-        concentration_bonus = 3,
-        damage_modifier = 0.7,
-        speed_modifier = 1.1,
-        
-        instructions = {
-            "Breathe in rhythm with your steps",
-            "Move like water flowing around obstacles",
-            "Maintain steady, flowing movements",
-            "Focus on healing and regeneration"
-        },
-        
-        effects = {
-            particle_effect = "water_flowing_particles",
-            sound_effect = "water_dance_sound",
-            screen_effect = "water_flowing_screen"
-        },
+        damage = 40,
+        stamina_cost = 20,
+        concentration_cost = 10,
+        cooldown = 6,
+        range = 120,
         
         requirements = {
             level = 5,
-            previous_forms = {"water_surface_slash", "water_wheel"}
+            forms = {"water_water_wheel"}
+        },
+        
+        effects = {
+            particle = "water_flow",
+            sound = "water_dance",
+            animation = "flowing_combo"
         }
     },
     
@@ -149,32 +127,26 @@ local forms = {
     {
         id = "water_waterfall_basin",
         name = "Waterfall Basin",
-        description = "A powerful defensive form that creates a healing aura",
-        difficulty = 4,
-        duration = 90,
-        cooldown = 45,
+        description = "Creates a protective basin of water that heals allies",
+        breathing_type = typeID,
+        form_number = 4,
         
-        stamina_drain = 3,
-        concentration_bonus = 4,
-        damage_modifier = 0.6,
-        speed_modifier = 0.8,
+        damage = 0,
+        healing = 30,
+        stamina_cost = 25,
+        concentration_cost = 15,
+        cooldown = 10,
+        range = 200,
         
-        instructions = {
-            "Inhale deeply like water filling a basin",
-            "Hold your breath as you channel energy",
-            "Exhale slowly, releasing healing energy",
-            "Create a protective water barrier around you"
+        requirements = {
+            level = 7,
+            forms = {"water_flowing_dance"}
         },
         
         effects = {
-            particle_effect = "waterfall_basin_particles",
-            sound_effect = "waterfall_sound",
-            screen_effect = "waterfall_basin_screen"
-        },
-        
-        requirements = {
-            level = 8,
-            previous_forms = {"water_surface_slash", "water_wheel", "water_flowing_dance"}
+            particle = "water_basin",
+            sound = "waterfall",
+            animation = "defensive_stance"
         }
     },
     
@@ -182,52 +154,37 @@ local forms = {
     {
         id = "water_constant_flux",
         name = "Constant Flux",
-        description = "The ultimate water breathing form, adapting to any situation",
-        difficulty = 5,
-        duration = 120,
-        cooldown = 60,
+        description = "The ultimate water breathing technique - unpredictable and powerful",
+        breathing_type = typeID,
+        form_number = 10,
         
-        stamina_drain = 4,
-        concentration_bonus = 5,
-        damage_modifier = 0.9,
-        speed_modifier = 1.2,
+        damage = 80,
+        stamina_cost = 40,
+        concentration_cost = 25,
+        cooldown = 15,
+        range = 250,
         
-        instructions = {
-            "Breathe in perfect rhythm with your surroundings",
-            "Adapt your breathing to the situation",
-            "Flow like water around all obstacles",
-            "Channel the power of the ocean itself"
+        requirements = {
+            level = 10,
+            forms = {"water_waterfall_basin"}
         },
         
         effects = {
-            particle_effect = "constant_flux_particles",
-            sound_effect = "ocean_waves_sound",
-            screen_effect = "constant_flux_screen"
-        },
-        
-        requirements = {
-            level = 12,
-            previous_forms = {"water_surface_slash", "water_wheel", "water_flowing_dance", "water_waterfall_basin"}
+            particle = "water_flux",
+            sound = "water_ultimate",
+            animation = "ultimate_water"
         }
     }
 }
 
 -- Register the breathing type
-if SERVER then
-    -- Register the breathing type
-    BreathingSystem.Config.RegisterBreathingType(typeID, typeData)
+if BreathingSystem and BreathingSystem.BreathingTypes then
+    BreathingSystem.BreathingTypes.RegisterType(typeID, typeData)
     
     -- Register all forms
     for _, form in ipairs(forms) do
-        BreathingSystem.Forms.RegisterForm(form.id, form)
+        BreathingSystem.BreathingTypes.RegisterForm(typeID, form)
     end
     
     print("[BreathingSystem] Registered Water Breathing with " .. #forms .. " forms")
 end
-
--- Return the breathing type data
-return {
-    typeID = typeID,
-    typeData = typeData,
-    forms = forms
-}

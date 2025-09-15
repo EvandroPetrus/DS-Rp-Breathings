@@ -1,9 +1,5 @@
 --[[
     BreathingSystem Core - Main Entry Point
-    ======================================
-    
-    This is the main entry point for the BreathingSystem addon.
-    Handles initialization, module loading, and provides the global API.
 ]]
 
 -- Global table initialization
@@ -17,12 +13,13 @@ print("[BreathingSystem] Initializing core system...")
 
 -- Load core modules (server-side only)
 if SERVER then
+    -- Core modules first
     include("core/config.lua")
+    include("core/breathing_types_manager.lua")  -- Add this before breathing types
     include("core/player_registry.lua")
     include("core/forms.lua")
     
-    -- Load breathing types
-    include("breathing_types/template.lua")
+    -- Load breathing types (they will self-register)
     include("breathing_types/water.lua")
     include("breathing_types/fire.lua")
     include("breathing_types/thunder.lua")
@@ -335,6 +332,55 @@ if SERVER then
             else
                 ply:ChatPrint(line)
             end
+        end
+    end)
+    
+    -- Add the missing test_effects command
+    concommand.Add("breathingsystem_test_effects", function(ply, cmd, args)
+        local isConsole = not IsValid(ply)
+        
+        if isConsole then
+            print("Effects testing requires a player")
+            return
+        end
+        
+        if #args < 1 then
+            ply:ChatPrint("Usage: breathingsystem_test_effects <effect_type> [form_id]")
+            ply:ChatPrint("Effect types: particles, sounds, animations")
+            return
+        end
+        
+        local effectType = args[1]
+        local formID = args[2]
+        
+        if effectType == "particles" then
+            if BreathingSystem.Particles then
+                if formID then
+                    BreathingSystem.Particles.CreateFormEffect(ply, formID)
+                else
+                    BreathingSystem.Particles.CreateBreathingTypeEffect(ply, "water")
+                end
+                ply:ChatPrint("[BreathingSystem] Particle effect test started!")
+            else
+                ply:ChatPrint("[BreathingSystem] Particle system not available!")
+            end
+        elseif effectType == "sounds" then
+            if BreathingSystem.Sounds then
+                BreathingSystem.Sounds.PlaySound(ply, "breathing_type", "water")
+                ply:ChatPrint("[BreathingSystem] Sound effect test started!")
+            else
+                ply:ChatPrint("[BreathingSystem] Sound system not available!")
+            end
+        elseif effectType == "animations" then
+            if BreathingSystem.Animations then
+                BreathingSystem.Animations.PlayAnimation(ply, "breathing_type", "water")
+                ply:ChatPrint("[BreathingSystem] Animation test started!")
+            else
+                ply:ChatPrint("[BreathingSystem] Animation system not available!")
+            end
+        else
+            ply:ChatPrint("Unknown effect type: " .. effectType)
+            ply:ChatPrint("Valid types: particles, sounds, animations")
         end
     end)
     
