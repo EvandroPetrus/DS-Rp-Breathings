@@ -33,10 +33,24 @@ if SERVER then
     include("breathingsystem/core/player_registry.lua")
     include("breathingsystem/core/forms.lua")
     
+    -- Load breathing types
+    include("breathingsystem/breathing_types/template.lua")
+    include("breathingsystem/breathing_types/water.lua")
+    include("breathingsystem/breathing_types/fire.lua")
+    include("breathingsystem/breathing_types/thunder.lua")
+    include("breathingsystem/breathing_types/stone.lua")
+    include("breathingsystem/breathing_types/wind.lua")
+    
+    -- Load mechanics modules
+    include("breathingsystem/mechanics/stamina.lua")
+    include("breathingsystem/mechanics/cooldowns.lua")
+    include("breathingsystem/mechanics/prerequisites.lua")
+    include("breathingsystem/mechanics/damage.lua")
+    
     -- AddCSLuaFile for client modules (when we add them in future phases)
     -- AddCSLuaFile("breathingsystem/client/...")
     
-    print("[BreathingSystem] Core modules loaded successfully")
+    print("[BreathingSystem] Core modules, breathing types, and mechanics loaded successfully")
 end
 
 -- Basic permissions system
@@ -84,6 +98,12 @@ if SERVER then
             print("  - " .. formID .. ": " .. (form.name or "Unnamed"))
         end
         
+        -- Test mechanics
+        print("[BreathingSystem] Mechanics status:")
+        print("  - Stamina: " .. BreathingSystem.Stamina.GetStamina(ply) .. "/" .. BreathingSystem.Stamina.GetMaxStamina(ply))
+        print("  - Concentration: " .. BreathingSystem.Stamina.GetConcentration(ply) .. "/" .. BreathingSystem.Stamina.GetMaxConcentration(ply))
+        print("  - Level: " .. BreathingSystem.Prerequisites.GetLevel(ply))
+        
         ply:ChatPrint("[BreathingSystem] Test completed! Check console for details.")
     end)
     
@@ -120,7 +140,66 @@ if SERVER then
         target:ChatPrint("[BreathingSystem] Your breathing type has been set to: " .. breathingType)
     end)
     
-    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set")
+    -- Command to list all breathing types
+    concommand.Add("breathingsystem_list_types", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        print("[BreathingSystem] Available breathing types:")
+        for typeID, data in pairs(BreathingSystem.Config.BreathingTypes) do
+            print("  - " .. typeID .. ": " .. (data.name or "Unnamed") .. " (" .. (data.description or "No description") .. ")")
+        end
+        
+        ply:ChatPrint("[BreathingSystem] Breathing types listed in console!")
+    end)
+    
+    -- Command to list forms for a specific breathing type
+    concommand.Add("breathingsystem_list_forms", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if #args < 1 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_list_forms <breathing_type>")
+            return
+        end
+        
+        local breathingType = args[1]
+        
+        if not BreathingSystem.Config.BreathingTypes[breathingType] then
+            ply:ChatPrint("[BreathingSystem] Invalid breathing type: " .. breathingType)
+            return
+        end
+        
+        print("[BreathingSystem] Forms for " .. breathingType .. " breathing:")
+        for formID, form in pairs(BreathingSystem.Forms.GetAll()) do
+            if string.find(formID, breathingType) then
+                print("  - " .. formID .. ": " .. (form.name or "Unnamed") .. " (" .. (form.description or "No description") .. ")")
+            end
+        end
+        
+        ply:ChatPrint("[BreathingSystem] Forms for " .. breathingType .. " listed in console!")
+    end)
+    
+    -- Command to test damage
+    concommand.Add("breathingsystem_test_damage", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if #args < 1 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_test_damage <form_id>")
+            return
+        end
+        
+        local formID = args[1]
+        local damageInfo = BreathingSystem.Damage.GetDamageInfo(ply, formID)
+        
+        if damageInfo then
+            print("[BreathingSystem] Damage info for " .. formID .. ":")
+            PrintTable(damageInfo)
+            ply:ChatPrint("[BreathingSystem] Damage info for " .. formID .. " displayed in console!")
+        else
+            ply:ChatPrint("[BreathingSystem] Invalid form ID: " .. formID)
+        end
+    end)
+    
+    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage")
 end
 
 -- Initialize default breathing types
