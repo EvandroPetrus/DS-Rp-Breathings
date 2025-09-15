@@ -920,7 +920,20 @@ function CreateFormsTab()
     local selectedFilter = "all"
     local filterButtons = {}
     
-    -- Function to update forms list based on filter (define it early)
+    -- Forms list (create early so UpdateFormsList can reference it)
+    local formsList = vgui.Create("DListView", parent)
+    formsList:SetPos(20, 105)
+    formsList:SetSize(parent:GetWide() - 40, parent:GetTall() - 185)
+    formsList:SetMultiSelect(false)
+    
+    formsList:AddColumn("Form Name"):SetWidth(250)
+    formsList:AddColumn("Type"):SetWidth(80)
+    formsList:AddColumn("Damage"):SetWidth(70)
+    formsList:AddColumn("Stamina"):SetWidth(70)
+    formsList:AddColumn("Cooldown"):SetWidth(70)
+    formsList:AddColumn("ID"):SetWidth(150)
+    
+    -- Function to update forms list based on filter
     local function UpdateFormsList()
         formsList:Clear()
         
@@ -996,19 +1009,6 @@ function CreateFormsTab()
         
         filterButtons[filter] = filterBtn
     end
-    
-    -- Forms list
-    local formsList = vgui.Create("DListView", parent)
-    formsList:SetPos(20, 105)
-    formsList:SetSize(parent:GetWide() - 40, parent:GetTall() - 185)
-    formsList:SetMultiSelect(false)
-    
-    formsList:AddColumn("Form Name"):SetWidth(250)
-    formsList:AddColumn("Type"):SetWidth(80)
-    formsList:AddColumn("Damage"):SetWidth(70)
-    formsList:AddColumn("Stamina"):SetWidth(70)
-    formsList:AddColumn("Cooldown"):SetWidth(70)
-    formsList:AddColumn("ID"):SetWidth(150)
     
     -- Initial population
     UpdateFormsList()
