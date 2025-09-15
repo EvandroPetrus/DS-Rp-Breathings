@@ -782,50 +782,118 @@ function CreateBreathingTypesTab()
     header:SetPos(20, 20)
     header:SetSize(parent:GetWide() - 40, 40)
     header.Paint = function(self, w, h)
-        draw.SimpleText("Breathing Types", "BreathingAdmin_Header", 0, h/2, Colors.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Breathing Types Overview", "BreathingAdmin_Header", 0, h/2, Colors.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Total Types: " .. table.Count(AdminHUD.data.breathingTypes or {}), "BreathingAdmin_Text", w - 10, h/2, Colors.textDim, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end
     
-    -- Grid layout for breathing types
-    local grid = vgui.Create("DGrid", parent)
-    grid:SetPos(20, 70)
-    grid:SetSize(parent:GetWide() - 40, parent:GetTall() - 100)
-    grid:SetCols(3)
-    grid:SetColWide(250)
-    grid:SetRowHeight(150)
+    -- Scroll panel for breathing types
+    local scrollPanel = vgui.Create("DScrollPanel", parent)
+    scrollPanel:SetPos(20, 70)
+    scrollPanel:SetSize(parent:GetWide() - 40, parent:GetTall() - 100)
+    
+    local sbar = scrollPanel:GetVBar()
+    sbar:SetWide(8)
+    sbar.Paint = function(self, w, h)
+        draw.RoundedBox(4, 0, 0, w, h, Color(40, 40, 45, 100))
+    end
+    sbar.btnGrip.Paint = function(self, w, h)
+        draw.RoundedBox(4, 0, 0, w, h, Colors.accent)
+    end
+    
+    -- Create cards for each breathing type
+    local x, y = 10, 10
+    local cardWidth, cardHeight = 280, 180
+    local spacing = 10
+    local cardsPerRow = math.floor((scrollPanel:GetWide() - 20) / (cardWidth + spacing))
+    local cardIndex = 0
     
     for id, typeData in pairs(AdminHUD.data.breathingTypes or {}) do
-        local typePanel = vgui.Create("DPanel")
-        typePanel:SetSize(240, 140)
+        local typePanel = vgui.Create("DPanel", scrollPanel)
+        
+        local row = math.floor(cardIndex / cardsPerRow)
+        local col = cardIndex % cardsPerRow
+        
+        typePanel:SetPos(col * (cardWidth + spacing) + 10, row * (cardHeight + spacing) + 10)
+        typePanel:SetSize(cardWidth, cardHeight)
         
         typePanel.Paint = function(self, w, h)
+            -- Card background
             draw.RoundedBox(8, 0, 0, w, h, Colors.button)
             
-            -- Type color indicator
+            -- Type color bar at top
             if typeData.color then
-                draw.RoundedBox(8, 0, 0, w, 4, typeData.color)
+                draw.RoundedBoxEx(8, 0, 0, w, 30, typeData.color, true, true, false, false)
             end
+            
+            -- Type ID badge
+            draw.RoundedBox(4, w - 70, 5, 65, 20, Color(0, 0, 0, 150))
+            draw.SimpleText(string.upper(id), "BreathingAdmin_Small", w - 37, 15, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             
             -- Type name
-            draw.SimpleText(typeData.name, "BreathingAdmin_SubHeader", 10, 15, Colors.accent)
+            draw.SimpleText(typeData.name or "Unknown", "BreathingAdmin_SubHeader", 10, 40, Colors.accent)
             
             -- Category
-            draw.SimpleText("Category: " .. (typeData.category or "unknown"), "BreathingAdmin_Small", 10, 35, Colors.textDim)
+            draw.SimpleText("Category: " .. (typeData.category or "unknown"), "BreathingAdmin_Small", 10, 65, Colors.textDim)
             
             -- Description
-            local desc = typeData.description or "No description"
-            if #desc > 100 then
-                desc = string.sub(desc, 1, 97) .. "..."
+            local desc = typeData.description or "No description available"
+            local wrappedText = {}
+            local words = string.Explode(" ", desc)
+            local currentLine = ""
+            
+            surface.SetFont("BreathingAdmin_Small")
+            for _, word in ipairs(words) do
+                local testLine = currentLine .. (currentLine == "" and "" or " ") .. word
+                local tw, th = surface.GetTextSize(testLine)
+                
+                if tw > w - 20 then
+                    if currentLine != "" then
+                        table.insert(wrappedText, currentLine)
+                    end
+                    currentLine = word
+                else
+                    currentLine = testLine
+                end
+            end
+            if currentLine != "" then
+                table.insert(wrappedText, currentLine)
             end
             
-            local lines = string.Explode("\n", desc)
-            for i, line in ipairs(lines) do
-                if i <= 3 then
-                    draw.SimpleText(line, "BreathingAdmin_Small", 10, 50 + (i * 15), Colors.text)
+            for i = 1, math.min(3, #wrappedText) do
+                draw.SimpleText(wrappedText[i], "BreathingAdmin_Small", 10, 80 + (i * 15), Colors.text)
+            end
+            
+            -- Player count using this type
+            local count = 0
+            for _, playerData in pairs(AdminHUD.data.players or {}) do
+                if playerData.breathing_type == id then
+                    count = count + 1
                 end
+            end
+            
+            draw.RoundedBox(4, 10, h - 30, w - 20, 25, Color(30, 30, 35, 200))
+            draw.SimpleText("Active Players: " .. count, "BreathingAdmin_Small", w/2, h - 17, count > 0 and Colors.success or Colors.textDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        
+        -- Add click functionality to assign to selected player
+        local assignBtn = vgui.Create("DButton", typePanel)
+        assignBtn:SetPos(10, cardHeight - 30)
+        assignBtn:SetSize(cardWidth - 20, 25)
+        assignBtn:SetText("")
+        assignBtn.Paint = function() end -- Invisible button
+        assignBtn.DoClick = function()
+            if AdminHUD.selectedPlayer then
+                SendAdminCommand("set_player_breathing", {
+                    player_index = AdminHUD.selectedPlayer,
+                    breathing_type = id
+                })
+                chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Assigned " .. typeData.name .. " to selected player")
+            else
+                chat.AddText(Color(255, 100, 100), "[Admin] ", Color(255, 255, 255), "No player selected! Go to Players tab first.")
             end
         end
         
-        grid:AddItem(typePanel)
+        cardIndex = cardIndex + 1
     end
 end
 
@@ -839,48 +907,155 @@ function CreateFormsTab()
     header:SetSize(parent:GetWide() - 40, 40)
     header.Paint = function(self, w, h)
         draw.SimpleText("Forms Management", "BreathingAdmin_Header", 0, h/2, Colors.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Total Forms: " .. table.Count(AdminHUD.data.forms or {}), "BreathingAdmin_Text", w - 10, h/2, Colors.textDim, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    end
+    
+    -- Filter buttons for breathing types
+    local filterY = 70
+    local filters = {"all", "water", "fire", "thunder", "stone", "wind"}
+    local selectedFilter = "all"
+    
+    for i, filter in ipairs(filters) do
+        local filterBtn = CreateStyledButton(parent, string.upper(filter), 20 + (i-1) * 80, filterY, 75, 25, function()
+            selectedFilter = filter
+            UpdateFormsList()
+        end)
     end
     
     -- Forms list
     local formsList = vgui.Create("DListView", parent)
-    formsList:SetPos(20, 70)
-    formsList:SetSize(parent:GetWide() - 40, parent:GetTall() - 150)
+    formsList:SetPos(20, 105)
+    formsList:SetSize(parent:GetWide() - 40, parent:GetTall() - 185)
     formsList:SetMultiSelect(false)
     
+    formsList:AddColumn("Form Name"):SetWidth(250)
+    formsList:AddColumn("Type"):SetWidth(80)
+    formsList:AddColumn("Damage"):SetWidth(70)
+    formsList:AddColumn("Stamina"):SetWidth(70)
+    formsList:AddColumn("Cooldown"):SetWidth(70)
     formsList:AddColumn("ID"):SetWidth(150)
-    formsList:AddColumn("Name"):SetWidth(200)
-    formsList:AddColumn("Type"):SetWidth(100)
-    formsList:AddColumn("Damage"):SetWidth(80)
-    formsList:AddColumn("Stamina"):SetWidth(80)
-    formsList:AddColumn("Cooldown"):SetWidth(80)
     
-    for id, formData in pairs(AdminHUD.data.forms or {}) do
-        formsList:AddLine(
-            id,
-            formData.name or "Unknown",
-            formData.breathing_type or "none",
-            formData.damage or 0,
-            formData.stamina_cost or 0,
-            formData.cooldown or 0
-        )
-    end
-    
-    -- Test form button
-    if AdminHUD.selectedPlayer then
-        CreateStyledButton(parent, "Test Selected Form", 20, parent:GetTall() - 60, 150, 30, function()
-            local selected = formsList:GetSelectedLine()
-            if selected then
-                local line = formsList:GetLine(selected)
-                if line then
-                    local formId = line:GetColumnText(1)
-                    SendAdminCommand("test_form", {
-                        player_index = AdminHUD.selectedPlayer,
-                        form_id = formId
-                    })
-                end
+    -- Function to update forms list based on filter
+    function UpdateFormsList()
+        formsList:Clear()
+        
+        for id, formData in pairs(AdminHUD.data.forms or {}) do
+            if selectedFilter == "all" or formData.breathing_type == selectedFilter then
+                formsList:AddLine(
+                    formData.name or "Unknown",
+                    string.upper(formData.breathing_type or "none"),
+                    tostring(formData.damage or 0),
+                    tostring(formData.stamina_cost or 0),
+                    tostring(formData.cooldown or 0) .. "s",
+                    id
+                )
             end
-        end)
+        end
+        
+        -- Color code rows by type
+        for k, line in pairs(formsList:GetLines()) do
+            local breathingType = string.lower(line:GetColumnText(2))
+            
+            line.Paint = function(self, w, h)
+                local bgColor = Colors.button
+                
+                if self:IsSelected() then
+                    bgColor = Colors.accent
+                elseif self:IsHovered() then
+                    bgColor = Colors.buttonHover
+                end
+                
+                draw.RoundedBox(4, 0, 0, w, h, bgColor)
+                
+                -- Type color indicator
+                local typeColor = Color(100, 100, 100)
+                if breathingType == "water" then typeColor = Color(100, 150, 255)
+                elseif breathingType == "fire" then typeColor = Color(255, 100, 100)
+                elseif breathingType == "thunder" then typeColor = Color(255, 255, 100)
+                elseif breathingType == "stone" then typeColor = Color(150, 100, 50)
+                elseif breathingType == "wind" then typeColor = Color(200, 200, 255)
+                end
+                
+                draw.RoundedBox(4, 2, 2, 4, h - 4, typeColor)
+            end
+        end
     end
+    
+    -- Initial population
+    UpdateFormsList()
+    
+    -- Action buttons panel
+    local actionsPanel = vgui.Create("DPanel", parent)
+    actionsPanel:SetPos(20, parent:GetTall() - 70)
+    actionsPanel:SetSize(parent:GetWide() - 40, 50)
+    actionsPanel.Paint = function(self, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(30, 30, 35, 200))
+    end
+    
+    -- Test form on selected player button
+    CreateStyledButton(actionsPanel, "Test Form on Player", 10, 10, 150, 30, function()
+        if not AdminHUD.selectedPlayer then
+            chat.AddText(Color(255, 100, 100), "[Admin] ", Color(255, 255, 255), "No player selected! Select a player from the Players tab first.")
+            return
+        end
+        
+        local selected = formsList:GetSelectedLine()
+        if selected then
+            local line = formsList:GetLine(selected)
+            if line then
+                local formId = line:GetColumnText(6) -- ID is in column 6
+                local formName = line:GetColumnText(1)
+                
+                -- Get the form number from the ID (e.g., "water_form_1" -> 1)
+                local formNum = string.match(formId, "_(%d+)$") or "1"
+                
+                SendAdminCommand("test_form", {
+                    player_index = AdminHUD.selectedPlayer,
+                    form_id = formId,
+                    form_number = tonumber(formNum)
+                })
+                
+                chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Testing form: " .. formName)
+            end
+        else
+            chat.AddText(Color(255, 100, 100), "[Admin] ", Color(255, 255, 255), "No form selected!")
+        end
+    end)
+    
+    -- Give form to player button
+    CreateStyledButton(actionsPanel, "Unlock for Player", 170, 10, 130, 30, function()
+        if not AdminHUD.selectedPlayer then
+            chat.AddText(Color(255, 100, 100), "[Admin] ", Color(255, 255, 255), "No player selected!")
+            return
+        end
+        
+        local selected = formsList:GetSelectedLine()
+        if selected then
+            local line = formsList:GetLine(selected)
+            if line then
+                local formId = line:GetColumnText(6)
+                local formName = line:GetColumnText(1)
+                
+                SendAdminCommand("unlock_form", {
+                    player_index = AdminHUD.selectedPlayer,
+                    form_id = formId
+                })
+                
+                chat.AddText(Color(100, 255, 100), "[Admin] ", Color(255, 255, 255), "Unlocked form: " .. formName)
+            end
+        else
+            chat.AddText(Color(255, 100, 100), "[Admin] ", Color(255, 255, 255), "No form selected!")
+        end
+    end)
+    
+    -- Info label
+    local infoLabel = vgui.Create("DLabel", actionsPanel)
+    infoLabel:SetPos(320, 10)
+    infoLabel:SetSize(300, 30)
+    infoLabel:SetText("Selected Player: " .. (AdminHUD.selectedPlayer and "Yes" or "None"))
+    infoLabel:SetFont("BreathingAdmin_Text")
+    infoLabel:SetTextColor(AdminHUD.selectedPlayer and Colors.success or Colors.warning)
+    infoLabel:SetContentAlignment(4) -- Center vertically
 end
 
 -- Logs tab

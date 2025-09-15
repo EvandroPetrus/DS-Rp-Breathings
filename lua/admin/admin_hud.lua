@@ -62,31 +62,72 @@ if SERVER then
                     end
                 end
                 
-                -- Gather breathing types
-                if BreathingSystem.Config and BreathingSystem.Config.breathing_types then
-                    for id, typeData in pairs(BreathingSystem.Config.breathing_types) do
-                        data.breathingTypes[id] = {
-                            name = typeData.name,
-                            description = typeData.description,
-                            category = typeData.category,
-                            color = typeData.color
-                        }
-                    end
-                end
+                -- Gather breathing types (hardcoded since they're defined in separate files)
+                data.breathingTypes = {
+                    water = {
+                        name = "Water Breathing",
+                        description = "Fluid and adaptive breathing style",
+                        category = "elemental",
+                        color = Color(100, 150, 255)
+                    },
+                    fire = {
+                        name = "Fire Breathing",
+                        description = "Fierce and powerful breathing style",
+                        category = "elemental",
+                        color = Color(255, 100, 100)
+                    },
+                    thunder = {
+                        name = "Thunder Breathing",
+                        description = "Fast and electrifying breathing style",
+                        category = "elemental",
+                        color = Color(255, 255, 100)
+                    },
+                    stone = {
+                        name = "Stone Breathing",
+                        description = "Solid and defensive breathing style",
+                        category = "elemental",
+                        color = Color(150, 100, 50)
+                    },
+                    wind = {
+                        name = "Wind Breathing",
+                        description = "Swift and unpredictable breathing style",
+                        category = "elemental",
+                        color = Color(200, 200, 255)
+                    }
+                }
                 
-                -- Gather forms
-                if BreathingSystem.Forms and BreathingSystem.Forms.registered_forms then
-                    for id, formData in pairs(BreathingSystem.Forms.registered_forms) do
-                        data.forms[id] = {
-                            name = formData.name,
-                            description = formData.description,
-                            breathing_type = formData.breathing_type,
-                            damage = formData.damage,
-                            stamina_cost = formData.stamina_cost,
-                            cooldown = formData.cooldown
-                        }
-                    end
-                end
+                -- Gather forms (simplified list)
+                data.forms = {
+                    water_form_1 = {name = "Water Surface Slash", breathing_type = "water", damage = 30, stamina_cost = 20, cooldown = 3},
+                    water_form_2 = {name = "Water Wheel", breathing_type = "water", damage = 40, stamina_cost = 25, cooldown = 4},
+                    water_form_3 = {name = "Flowing Dance", breathing_type = "water", damage = 35, stamina_cost = 30, cooldown = 5},
+                    water_form_4 = {name = "Waterfall Basin", breathing_type = "water", damage = 50, stamina_cost = 35, cooldown = 6},
+                    water_form_5 = {name = "Constant Flux", breathing_type = "water", damage = 60, stamina_cost = 40, cooldown = 8},
+                    
+                    fire_form_1 = {name = "Unknowing Fire", breathing_type = "fire", damage = 40, stamina_cost = 20, cooldown = 4},
+                    fire_form_2 = {name = "Rising Scorching Sun", breathing_type = "fire", damage = 50, stamina_cost = 25, cooldown = 5},
+                    fire_form_3 = {name = "Blazing Universe", breathing_type = "fire", damage = 60, stamina_cost = 35, cooldown = 8},
+                    fire_form_4 = {name = "Flame Tiger", breathing_type = "fire", damage = 80, stamina_cost = 40, cooldown = 10},
+                    fire_form_5 = {name = "Rengoku", breathing_type = "fire", damage = 100, stamina_cost = 50, cooldown = 15},
+                    
+                    thunder_form_1 = {name = "Thunderclap and Flash", breathing_type = "thunder", damage = 35, stamina_cost = 20, cooldown = 2},
+                    thunder_form_2 = {name = "Rice Spirit", breathing_type = "thunder", damage = 45, stamina_cost = 25, cooldown = 3},
+                    thunder_form_3 = {name = "Thunder Swarm", breathing_type = "thunder", damage = 55, stamina_cost = 30, cooldown = 4},
+                    thunder_form_4 = {name = "Distant Thunder", breathing_type = "thunder", damage = 65, stamina_cost = 35, cooldown = 5},
+                    thunder_form_5 = {name = "Heat Lightning", breathing_type = "thunder", damage = 75, stamina_cost = 40, cooldown = 6},
+                    
+                    stone_form_1 = {name = "Stone Skin", breathing_type = "stone", damage = 25, stamina_cost = 25, cooldown = 5},
+                    stone_form_2 = {name = "Upper Smash", breathing_type = "stone", damage = 45, stamina_cost = 30, cooldown = 6},
+                    stone_form_3 = {name = "Stone Pillar", breathing_type = "stone", damage = 55, stamina_cost = 35, cooldown = 7},
+                    stone_form_4 = {name = "Volcanic Rock", breathing_type = "stone", damage = 70, stamina_cost = 40, cooldown = 8},
+                    stone_form_5 = {name = "Arcs of Justice", breathing_type = "stone", damage = 85, stamina_cost = 45, cooldown = 10},
+                    
+                    wind_form_1 = {name = "Dust Whirlwind Cutter", breathing_type = "wind", damage = 30, stamina_cost = 18, cooldown = 3},
+                    wind_form_2 = {name = "Claws-Purifying Wind", breathing_type = "wind", damage = 40, stamina_cost = 22, cooldown = 4},
+                    wind_form_3 = {name = "Clean Storm Wind Tree", breathing_type = "wind", damage = 50, stamina_cost = 28, cooldown = 5},
+                    wind_form_4 = {name = "Rising Dust Storm", breathing_type = "wind", damage = 60, stamina_cost = 32, cooldown = 6},
+                    wind_form_5 = {name = "Cold Mountain Wind", breathing_type = "wind", damage = 70, stamina_cost = 38, cooldown = 7}
+                }
                 
                 -- Send data to client
                 print("[BreathingSystem] Sending admin HUD data to " .. ply:Name())
@@ -130,7 +171,14 @@ if SERVER then
                 local data = BreathingSystem.PlayerRegistry.GetPlayerData(target)
                 if data then
                     data.level = args.level
+                    -- Update network vars
+                    target:SetNWInt("BreathingLevel", args.level)
                     ply:ChatPrint("[Admin] Set " .. target:Name() .. "'s level to " .. args.level)
+                    
+                    -- Log the action
+                    if BreathingSystem.Logging then
+                        BreathingSystem.Logging.LogPlayer("INFO", "Admin set level to " .. args.level, target, "Admin")
+                    end
                 end
             end
             
@@ -140,7 +188,18 @@ if SERVER then
                 local data = BreathingSystem.PlayerRegistry.GetPlayerData(target)
                 if data then
                     data.xp = args.xp
+                    -- Update network vars
+                    target:SetNWInt("BreathingExp", args.xp)
+                    -- Calculate next level XP requirement
+                    local nextLevel = (data.level or 1) + 1
+                    local xpRequired = nextLevel * 100
+                    target:SetNWInt("BreathingExpNext", xpRequired)
                     ply:ChatPrint("[Admin] Set " .. target:Name() .. "'s XP to " .. args.xp)
+                    
+                    -- Log the action
+                    if BreathingSystem.Logging then
+                        BreathingSystem.Logging.LogPlayer("INFO", "Admin set XP to " .. args.xp, target, "Admin")
+                    end
                 end
             end
             
