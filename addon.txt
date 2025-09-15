@@ -1,0 +1,7 @@
+"BreathingSystem"
+{
+    "title"        "BreathingSystem"
+    "type"         "gamemode"
+    "tags"         "roleplay,breathing,meditation"
+    "ignore"       ""
+}
