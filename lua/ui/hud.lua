@@ -1,232 +1,95 @@
 --[[
-    BreathingSystem - HUD System
-    ===========================
+    BreathingSystem - Simple HUD
+    ============================
     
-    This module handles the HUD display for stamina, cooldowns, concentration.
-    Provides real-time updates and visual feedback for players.
-    
-    Responsibilities:
-    - Display stamina and concentration bars
-    - Show cooldown timers
-    - Display current breathing type and form
-    - Provide visual feedback for status effects
-    - Update in real-time with server state
-    
-    Public API:
-    - BreathingSystem.HUD.UpdateHUD(ply) - Update HUD for player
-    - BreathingSystem.HUD.GetHUDData(ply) - Get HUD data for player
-    - BreathingSystem.HUD.ShowHUD(ply) - Show HUD for player
-    - BreathingSystem.HUD.HideHUD(ply) - Hide HUD for player
+    Displays breathing system info on screen.
 ]]
 
--- Initialize HUD module
-BreathingSystem.HUD = BreathingSystem.HUD or {}
+-- Client-side only
+if not CLIENT then return end
 
--- HUD configuration
-BreathingSystem.HUD.Config = {
-    -- HUD position and size
-    position = {
-        x = 20,
-        y = 20
-    },
-    
-    -- Bar dimensions
-    bars = {
-        width = 200,
-        height = 20,
-        spacing = 5
-    },
-    
-    -- Colors
+-- HUD Configuration
+local HUD_CONFIG = {
+    enabled = true,
+    position = {x = 20, y = ScrH() - 200},
     colors = {
-        stamina = Color(0, 255, 0, 200),
-        stamina_low = Color(255, 0, 0, 200),
-        concentration = Color(0, 150, 255, 200),
-        cooldown = Color(255, 255, 0, 200),
         background = Color(0, 0, 0, 150),
-        text = Color(255, 255, 255, 255)
-    },
-    
-    -- Update intervals
-    update_interval = 0.1, -- 10 FPS
-    network_interval = 1.0  -- 1 second
+        text = Color(255, 255, 255, 255),
+        water = Color(0, 150, 255, 255),
+        fire = Color(255, 100, 0, 255),
+        thunder = Color(255, 255, 0, 255),
+        stone = Color(128, 128, 128, 255),
+        wind = Color(200, 200, 255, 255),
+        none = Color(100, 100, 100, 255)
+    }
 }
 
--- HUD data per player
-BreathingSystem.HUD.PlayerData = BreathingSystem.HUD.PlayerData or {}
+-- Get breathing color
+local function GetBreathingColor(breathingType)
+    return HUD_CONFIG.colors[breathingType] or HUD_CONFIG.colors.none
+end
 
--- Get HUD data for player
-function BreathingSystem.HUD.GetHUDData(ply)
-    if not IsValid(ply) then return nil end
+-- Draw the HUD
+hook.Add("HUDPaint", "BreathingSystem_HUD", function()
+    if not HUD_CONFIG.enabled then return end
     
-    local data = BreathingSystem.GetPlayerData(ply)
-    if not data then return nil end
+    local ply = LocalPlayer()
+    if not IsValid(ply) then return end
     
-    local hudData = {
-        -- Basic info
-        player = ply,
-        name = ply:Name(),
-        
-        -- Stamina
-        stamina = data.stamina or 0,
-        maxStamina = BreathingSystem.Stamina.GetMaxStamina(ply),
-        staminaPercent = 0,
-        
-        -- Concentration
-        concentration = data.concentration or 0,
-        maxConcentration = BreathingSystem.Stamina.GetMaxConcentration(ply),
-        concentrationPercent = 0,
-        
-        -- Breathing type
-        breathingType = data.current_breathing_type or "normal",
-        breathingTypeName = "Normal Breathing",
-        
-        -- Level and XP
-        level = BreathingSystem.Training.GetLevel(ply),
-        xp = BreathingSystem.Training.GetXP(ply),
-        xpProgress = BreathingSystem.Training.GetXPProgress(ply),
-        
-        -- Status effects
-        statusEffects = BreathingSystem.StatusEffects.GetActiveEffects(ply),
-        
-        -- Combat status
-        inCombat = BreathingSystem.Combat.IsInCombat(ply),
-        
-        -- Total concentration
-        totalConcentration = BreathingSystem.Concentration.IsInTotalConcentration(ply),
-        totalConcentrationStatus = BreathingSystem.Concentration.GetTotalConcentrationStatus(ply),
-        
-        -- Cooldowns
-        cooldowns = BreathingSystem.Cooldowns.GetAllCooldowns(ply),
-        
-        -- Active effects
-        activeParticles = BreathingSystem.Particles.GetActiveEffects(ply),
-        activeAnimations = BreathingSystem.Animations.GetActiveAnimations(ply),
-        activeSounds = BreathingSystem.Sounds.GetActiveSounds(ply)
-    }
+    -- Get player data (simplified for client)
+    local breathingType = ply:GetNWString("BreathingType", "none")
+    local level = ply:GetNWInt("BreathingLevel", 1)
+    local stamina = ply:GetNWInt("BreathingStamina", 100)
+    local maxStamina = ply:GetNWInt("BreathingMaxStamina", 100)
     
-    -- Calculate percentages
-    if hudData.maxStamina > 0 then
-        hudData.staminaPercent = (hudData.stamina / hudData.maxStamina) * 100
+    -- Position
+    local x, y = HUD_CONFIG.position.x, HUD_CONFIG.position.y
+    
+    -- Draw background
+    draw.RoundedBox(8, x, y, 250, 120, HUD_CONFIG.colors.background)
+    
+    -- Draw title
+    draw.SimpleText("BREATHING SYSTEM", "DermaLarge", x + 125, y + 10, HUD_CONFIG.colors.text, TEXT_ALIGN_CENTER)
+    
+    -- Draw breathing type
+    local typeColor = GetBreathingColor(breathingType)
+    local typeText = breathingType:upper()
+    if breathingType == "none" then
+        typeText = "NO BREATHING TYPE"
     end
+    draw.SimpleText(typeText, "DermaDefault", x + 125, y + 35, typeColor, TEXT_ALIGN_CENTER)
     
-    if hudData.maxConcentration > 0 then
-        hudData.concentrationPercent = (hudData.concentration / hudData.maxConcentration) * 100
+    -- Draw level
+    draw.SimpleText("Level: " .. level, "DermaDefault", x + 10, y + 55, HUD_CONFIG.colors.text)
+    
+    -- Draw stamina bar
+    draw.SimpleText("Stamina:", "DermaDefault", x + 10, y + 75, HUD_CONFIG.colors.text)
+    
+    -- Stamina bar background
+    draw.RoundedBox(4, x + 70, y + 75, 170, 16, Color(50, 50, 50, 200))
+    
+    -- Stamina bar fill
+    local staminaPercent = stamina / maxStamina
+    local barColor = Color(0, 255, 0, 255)
+    if staminaPercent < 0.3 then
+        barColor = Color(255, 0, 0, 255)
+    elseif staminaPercent < 0.6 then
+        barColor = Color(255, 255, 0, 255)
     end
+    draw.RoundedBox(4, x + 70, y + 75, 170 * staminaPercent, 16, barColor)
     
-    -- Get breathing type name
-    local breathingTypeData = BreathingSystem.Config.BreathingTypes[hudData.breathingType]
-    if breathingTypeData then
-        hudData.breathingTypeName = breathingTypeData.name or "Unknown"
-    end
+    -- Draw stamina text
+    draw.SimpleText(stamina .. "/" .. maxStamina, "DermaDefault", x + 155, y + 75, HUD_CONFIG.colors.text, TEXT_ALIGN_CENTER)
     
-    return hudData
-end
+    -- Draw help text
+    draw.SimpleText("Press F9 for menu | Type !bs for help", "DermaDefault", x + 125, y + 100, Color(200, 200, 200, 150), TEXT_ALIGN_CENTER)
+end)
 
--- Update HUD for player
-function BreathingSystem.HUD.UpdateHUD(ply)
-    if not IsValid(ply) then return false end
-    
-    local hudData = BreathingSystem.HUD.GetHUDData(ply)
-    if not hudData then return false end
-    
-    -- Store HUD data
-    local steamid = ply:SteamID()
-    BreathingSystem.HUD.PlayerData[steamid] = hudData
-    
-    -- Send HUD data to client
-    BreathingSystem.HUD.SendHUDData(ply, hudData)
-    
-    return true
-end
+-- Toggle HUD command
+concommand.Add("breathingsystem_hud_toggle", function()
+    HUD_CONFIG.enabled = not HUD_CONFIG.enabled
+    local status = HUD_CONFIG.enabled and "enabled" or "disabled"
+    chat.AddText(Color(0, 150, 255), "[BreathingSystem] ", Color(255, 255, 255), "HUD " .. status)
+end)
 
--- Send HUD data to client
-function BreathingSystem.HUD.SendHUDData(ply, hudData)
-    if not IsValid(ply) or not hudData then return false end
-    
-    -- Create network message
-    local netData = {
-        stamina = hudData.stamina,
-        maxStamina = hudData.maxStamina,
-        staminaPercent = hudData.staminaPercent,
-        concentration = hudData.concentration,
-        maxConcentration = hudData.maxConcentration,
-        concentrationPercent = hudData.concentrationPercent,
-        breathingType = hudData.breathingType,
-        breathingTypeName = hudData.breathingTypeName,
-        level = hudData.level,
-        xp = hudData.xp,
-        xpProgress = hudData.xpProgress,
-        statusEffects = hudData.statusEffects,
-        inCombat = hudData.inCombat,
-        totalConcentration = hudData.totalConcentration,
-        cooldowns = hudData.cooldowns
-    }
-    
-    -- Send to client
-    net.Start("BreathingSystem_HUDUpdate")
-    net.WriteTable(netData)
-    net.Send(ply)
-    
-    return true
-end
-
--- Show HUD for player
-function BreathingSystem.HUD.ShowHUD(ply)
-    if not IsValid(ply) then return false end
-    
-    net.Start("BreathingSystem_HUDShow")
-    net.Send(ply)
-    
-    return true
-end
-
--- Hide HUD for player
-function BreathingSystem.HUD.HideHUD(ply)
-    if not IsValid(ply) then return false end
-    
-    net.Start("BreathingSystem_HUDHide")
-    net.Send(ply)
-    
-    return true
-end
-
--- Update HUD for all players
-function BreathingSystem.HUD.UpdateAllPlayers()
-    for _, ply in pairs(player.GetAll()) do
-        if IsValid(ply) then
-            BreathingSystem.HUD.UpdateHUD(ply)
-        end
-    end
-end
-
--- Get HUD data for all players
-function BreathingSystem.HUD.GetAllHUDData()
-    local allData = {}
-    
-    for steamid, hudData in pairs(BreathingSystem.HUD.PlayerData) do
-        if IsValid(hudData.player) then
-            allData[steamid] = hudData
-        else
-            -- Clean up data for disconnected players
-            BreathingSystem.HUD.PlayerData[steamid] = nil
-        end
-    end
-    
-    return allData
-end
-
--- Initialize HUD system
-if SERVER then
-    -- Update HUD every 0.1 seconds
-    timer.Create("BreathingSystem_HUDUpdate", BreathingSystem.HUD.Config.update_interval, 0, function()
-        BreathingSystem.HUD.UpdateAllPlayers()
-    end)
-    
-    -- Network messages
-    util.AddNetworkString("BreathingSystem_HUDUpdate")
-    util.AddNetworkString("BreathingSystem_HUDShow")
-    util.AddNetworkString("BreathingSystem_HUDHide")
-    
-    print("[BreathingSystem.HUD] HUD system loaded")
-end
+print("[BreathingSystem] HUD loaded (client)")
