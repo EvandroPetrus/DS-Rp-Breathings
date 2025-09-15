@@ -50,7 +50,7 @@ if SERVER then
     -- Load admin modules
     include("admin/balance_tools.lua")
     include("admin/logging.lua")
-    include("admin/admin_hud.lua")
+    -- Admin HUD is loaded via autorun/breathing_admin_init.lua
     
     -- Load testing modules AFTER everything else
     include("core/autotest.lua")
@@ -59,10 +59,7 @@ if SERVER then
     -- Load UI modules (client-side)
     AddCSLuaFile("ui/hud.lua")
     AddCSLuaFile("ui/menus.lua")
-    
-    -- Load admin HUD client
-    AddCSLuaFile("admin/admin_hud.lua")
-    AddCSLuaFile("admin/admin_hud_client.lua")
+    -- Admin HUD client files are loaded via autorun/breathing_admin_init.lua
     
     print("[BreathingSystem] All modules loaded successfully!")
 end

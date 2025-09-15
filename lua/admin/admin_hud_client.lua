@@ -908,8 +908,11 @@ end
 
 -- Receive admin HUD data
 net.Receive("BreathingSystem_OpenAdminHUD", function()
+    print("[BreathingSystem] Received admin HUD data from server")
     AdminHUD.data = net.ReadTable()
+    print("[BreathingSystem] Data received, creating admin HUD...")
     CreateAdminHUD()
+    print("[BreathingSystem] Admin HUD should now be visible")
 end)
 
 -- Receive data sync
@@ -938,4 +941,58 @@ concommand.Add("breathingadmin_refresh", function()
     RequestAdminData()
 end)
 
-print("[BreathingSystem] Admin HUD client loaded") 
+-- Debug command to test admin HUD directly
+concommand.Add("breathingadmin_test", function()
+    if not LocalPlayer():IsAdmin() and not LocalPlayer():IsSuperAdmin() then
+        chat.AddText(Color(255, 100, 100), "[BreathingSystem] ", Color(255, 255, 255), "You must be an admin!")
+        return
+    end
+    
+    print("[BreathingSystem] Testing admin HUD with dummy data...")
+    
+    -- Create dummy data for testing
+    AdminHUD.data = {
+        players = {
+            [1] = {
+                name = "Test Player",
+                steamid = "STEAM_0:0:12345",
+                breathing_type = "water",
+                level = 5,
+                xp = 250,
+                stamina = 80,
+                max_stamina = 100,
+                concentration = 50,
+                max_concentration = 100,
+                forms_unlocked = {},
+                total_concentration_active = false
+            }
+        },
+        breathingTypes = {
+            water = {name = "Water Breathing", description = "Fluid and adaptive", category = "elemental", color = Color(100, 150, 255)},
+            fire = {name = "Fire Breathing", description = "Fierce and powerful", category = "elemental", color = Color(255, 100, 100)}
+        },
+        forms = {
+            water_form_1 = {name = "Water Surface Slash", description = "Basic water attack", breathing_type = "water", damage = 30, stamina_cost = 10, cooldown = 3}
+        },
+        balance = {categories = {}},
+        logs = {
+            {timestamp = os.date("%Y-%m-%d %H:%M:%S"), level = "INFO", message = "Test log entry", category = "Test"}
+        },
+        presets = {"Default", "Competitive", "Casual"}
+    }
+    
+    CreateAdminHUD()
+    chat.AddText(Color(100, 255, 100), "[BreathingSystem] ", Color(255, 255, 255), "Admin HUD opened with test data")
+end)
+
+-- Also add a simpler version check
+concommand.Add("breathingadmin_check", function()
+    print("[BreathingSystem] Admin HUD client is loaded and ready")
+    print("[BreathingSystem] You are " .. (LocalPlayer():IsAdmin() and "an admin" or "NOT an admin"))
+    print("[BreathingSystem] AdminHUD table exists: " .. tostring(AdminHUD ~= nil))
+    print("[BreathingSystem] CreateAdminHUD function exists: " .. tostring(CreateAdminHUD ~= nil))
+end)
+
+print("[BreathingSystem] Admin HUD client loaded")
+print("[BreathingSystem] Test with: breathingadmin_test (admin only)")
+print("[BreathingSystem] Check status with: breathingadmin_check") 

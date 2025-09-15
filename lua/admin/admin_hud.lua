@@ -89,11 +89,13 @@ if SERVER then
                 end
                 
                 -- Send data to client
+                print("[BreathingSystem] Sending admin HUD data to " .. ply:Name())
                 net.Start("BreathingSystem_OpenAdminHUD")
                 net.WriteTable(data)
                 net.Send(ply)
                 
                 ply:ChatPrint("[BreathingSystem] Opening admin HUD...")
+                print("[BreathingSystem] Admin HUD data sent to client")
             else
                 ply:ChatPrint("[BreathingSystem] You must be an admin to use this command!")
             end
@@ -267,8 +269,4 @@ if SERVER then
     print("[BreathingSystem] Admin HUD server-side loaded")
 end
 
--- Client-side HUD
-if CLIENT then
-    -- Include client HUD file
-    include("admin/admin_hud_client.lua")
-end 
+-- Don't include client file here, it will be loaded separately 
