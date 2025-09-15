@@ -57,10 +57,15 @@ if SERVER then
     include("breathingsystem/effects/animations.lua")
     include("breathingsystem/effects/sounds.lua")
     
+    -- Load combat modules
+    include("breathingsystem/combat/pvp_integration.lua")
+    include("breathingsystem/combat/status_effects.lua")
+    include("breathingsystem/combat/counters.lua")
+    
     -- AddCSLuaFile for client modules (when we add them in future phases)
     -- AddCSLuaFile("breathingsystem/client/...")
     
-    print("[BreathingSystem] Core modules, breathing types, mechanics, progression, and effects loaded successfully")
+    print("[BreathingSystem] Core modules, breathing types, mechanics, progression, effects, and combat loaded successfully")
 end
 
 -- Basic permissions system
@@ -126,6 +131,11 @@ if SERVER then
         print("  - Active particles: " .. table.Count(BreathingSystem.Particles.GetActiveEffects(ply)))
         print("  - Active animations: " .. table.Count(BreathingSystem.Animations.GetActiveAnimations(ply)))
         print("  - Active sounds: " .. table.Count(BreathingSystem.Sounds.GetActiveSounds(ply)))
+        
+        -- Test combat
+        print("[BreathingSystem] Combat status:")
+        print("  - In combat: " .. (BreathingSystem.Combat.IsInCombat(ply) and "Yes" or "No"))
+        print("  - Active effects: " .. table.Count(BreathingSystem.StatusEffects.GetActiveEffects(ply)))
         
         ply:ChatPrint("[BreathingSystem] Test completed! Check console for details.")
     end)
@@ -301,7 +311,50 @@ if SERVER then
         end
     end)
     
-    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration, breathingsystem_test_effects")
+    -- Command to test combat
+    concommand.Add("breathingsystem_test_combat", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if #args < 2 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_test_combat <target_name> <form_id>")
+            return
+        end
+        
+        local targetName = args[1]
+        local formID = args[2]
+        
+        local target = player.GetByName(targetName)
+        if not IsValid(target) then
+            ply:ChatPrint("[BreathingSystem] Player '" .. targetName .. "' not found!")
+            return
+        end
+        
+        if BreathingSystem.Combat.ApplyDamage(ply, target, formID) then
+            ply:ChatPrint("[BreathingSystem] Combat test successful!")
+        else
+            ply:ChatPrint("[BreathingSystem] Combat test failed!")
+        end
+    end)
+    
+    -- Command to test status effects
+    concommand.Add("breathingsystem_test_status", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if #args < 1 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_test_status <effect_type>")
+            return
+        end
+        
+        local effectType = args[1]
+        
+        if BreathingSystem.StatusEffects.ApplyEffect(ply, effectType, 10.0) then
+            ply:ChatPrint("[BreathingSystem] Applied " .. effectType .. " effect!")
+        else
+            ply:ChatPrint("[BreathingSystem] Failed to apply " .. effectType .. " effect!")
+        end
+    end)
+    
+    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration, breathingsystem_test_effects, breathingsystem_test_combat, breathingsystem_test_status")
 end
 
 -- Initialize default breathing types
