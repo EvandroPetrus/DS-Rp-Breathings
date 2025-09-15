@@ -67,10 +67,15 @@ if SERVER then
     include("breathingsystem/ui/menus.lua")
     include("breathingsystem/ui/keybinds.lua")
     
+    -- Load admin modules
+    include("breathingsystem/admin/config_manager.lua")
+    include("breathingsystem/admin/logging.lua")
+    include("breathingsystem/admin/balance_tools.lua")
+    
     -- AddCSLuaFile for client modules (when we add them in future phases)
     -- AddCSLuaFile("breathingsystem/client/...")
     
-    print("[BreathingSystem] Core modules, breathing types, mechanics, progression, effects, combat, and UI loaded successfully")
+    print("[BreathingSystem] Core modules, breathing types, mechanics, progression, effects, combat, UI, and admin loaded successfully")
 end
 
 -- Basic permissions system
@@ -146,6 +151,12 @@ if SERVER then
         print("[BreathingSystem] UI status:")
         print("  - HUD enabled: " .. (playerData.hud_enabled ~= false and "Yes" or "No"))
         print("  - Keybinds: " .. table.Count(BreathingSystem.Keybinds.GetAllKeybinds(ply)))
+        
+        -- Test admin
+        print("[BreathingSystem] Admin status:")
+        print("  - Config loaded: " .. (BreathingSystem.ConfigManager and "Yes" or "No"))
+        print("  - Logging level: " .. (BreathingSystem.Logging and BreathingSystem.Logging.GetLevel() or "Unknown"))
+        print("  - Balance categories: " .. (BreathingSystem.Balance and table.Count(BreathingSystem.Balance.Values) or "Unknown"))
         
         ply:ChatPrint("[BreathingSystem] Test completed! Check console for details.")
     end)
@@ -388,7 +399,130 @@ if SERVER then
         end
     end)
     
-    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration, breathingsystem_test_effects, breathingsystem_test_combat, breathingsystem_test_status, breathingsystem_menu")
+    -- Admin command to set balance value
+    concommand.Add("breathingsystem_balance", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if not BreathingSystem.Permissions.IsAdmin(ply) then
+            ply:ChatPrint("[BreathingSystem] You don't have permission to use this command!")
+            return
+        end
+        
+        if #args < 3 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_balance <category> <key> <value>")
+            return
+        end
+        
+        local category = args[1]
+        local key = args[2]
+        local value = args[3]
+        
+        -- Convert value to appropriate type
+        if value == "true" then
+            value = true
+        elseif value == "false" then
+            value = false
+        elseif tonumber(value) then
+            value = tonumber(value)
+        end
+        
+        if BreathingSystem.Balance.SetValue(category, key, value) then
+            ply:ChatPrint("[BreathingSystem] Set balance value: " .. category .. "." .. key .. " = " .. tostring(value))
+        else
+            ply:ChatPrint("[BreathingSystem] Failed to set balance value!")
+        end
+    end)
+    
+    -- Admin command to get balance report
+    concommand.Add("breathingsystem_balance_report", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if not BreathingSystem.Permissions.IsAdmin(ply) then
+            ply:ChatPrint("[BreathingSystem] You don't have permission to use this command!")
+            return
+        end
+        
+        local report = BreathingSystem.Balance.GetBalanceReport()
+        print("[BreathingSystem] Balance Report:")
+        PrintTable(report)
+        
+        ply:ChatPrint("[BreathingSystem] Balance report displayed in console!")
+    end)
+    
+    -- Admin command to reset balance
+    concommand.Add("breathingsystem_balance_reset", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if not BreathingSystem.Permissions.IsAdmin(ply) then
+            ply:ChatPrint("[BreathingSystem] You don't have permission to use this command!")
+            return
+        end
+        
+        if #args < 1 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_balance_reset <category|all>")
+            return
+        end
+        
+        local category = args[1]
+        
+        if category == "all" then
+            BreathingSystem.Balance.ResetAll()
+            ply:ChatPrint("[BreathingSystem] Reset all balance values to default!")
+        else
+            if BreathingSystem.Balance.ResetCategory(category) then
+                ply:ChatPrint("[BreathingSystem] Reset category " .. category .. " to default!")
+            else
+                ply:ChatPrint("[BreathingSystem] Failed to reset category " .. category .. "!")
+            end
+        end
+    end)
+    
+    -- Admin command to set logging level
+    concommand.Add("breathingsystem_log_level", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if not BreathingSystem.Permissions.IsAdmin(ply) then
+            ply:ChatPrint("[BreathingSystem] You don't have permission to use this command!")
+            return
+        end
+        
+        if #args < 1 then
+            ply:ChatPrint("[BreathingSystem] Usage: breathingsystem_log_level <level>")
+            return
+        end
+        
+        local level = args[1]
+        
+        if BreathingSystem.Logging.SetLevel(level) then
+            ply:ChatPrint("[BreathingSystem] Logging level set to " .. level .. "!")
+        else
+            ply:ChatPrint("[BreathingSystem] Invalid logging level: " .. level .. "!")
+        end
+    end)
+    
+    -- Admin command to get logs
+    concommand.Add("breathingsystem_logs", function(ply, cmd, args)
+        if not IsValid(ply) then return end
+        
+        if not BreathingSystem.Permissions.IsAdmin(ply) then
+            ply:ChatPrint("[BreathingSystem] You don't have permission to use this command!")
+            return
+        end
+        
+        local count = tonumber(args[1]) or 50
+        local level = args[2]
+        
+        local logs = BreathingSystem.Logging.GetLogs(count, level)
+        
+        print("[BreathingSystem] Recent logs:")
+        for _, log in ipairs(logs) do
+            print("[" .. log.timestamp .. "] [" .. log.level .. "] [" .. log.category .. "] " .. log.message)
+        end
+        
+        ply:ChatPrint("[BreathingSystem] Logs displayed in console!")
+    end)
+    
+    print("[BreathingSystem] Commands registered: breathingsystem_test, breathingsystem_set, breathingsystem_list_types, breathingsystem_list_forms, breathingsystem_test_damage, breathingsystem_train, breathingsystem_total_concentration, breathingsystem_test_effects, breathingsystem_test_combat, breathingsystem_test_status, breathingsystem_menu, breathingsystem_balance, breathingsystem_balance_report, breathingsystem_balance_reset, breathingsystem_log_level, breathingsystem_logs")
 end
 
 -- Initialize default breathing types
